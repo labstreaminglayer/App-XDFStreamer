@@ -25,10 +25,15 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
         main.cpp \
-        xdfstreamer.cpp
+        xdfstreamer.cpp \
+    libxdf/pugixml/pugixml.cpp \
+    libxdf/xdf.cpp
 
 HEADERS += \
-        xdfstreamer.h
+        xdfstreamer.h \
+    libxdf/pugixml/pugiconfig.hpp \
+    libxdf/pugixml/pugixml.hpp \
+    libxdf/xdf.h
 
 FORMS += \
         xdfstreamer.ui
