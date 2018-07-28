@@ -17,6 +17,10 @@ public:
 
 private:
     Ui::XdfStreamer *ui;
+
+private slots:
+    void enableFilePicker(int status);
+    void openFilePicker();
 };
 
 #endif // XDFSTREAMER_H
