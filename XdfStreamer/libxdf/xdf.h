@@ -199,7 +199,7 @@ public:
      * \param userSrate is recommended to be between integer 1 and
      * the highest sample rate of the current file.
      */
-    void resample(int userSrate);
+//    void resample(int userSrate);
 
     /*!
      * \brief syncTimeStamps

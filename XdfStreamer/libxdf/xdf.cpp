@@ -23,7 +23,7 @@
 #include "pugixml/pugixml.hpp"  //pugi XML parser
 #include <sstream>
 #include <algorithm>
-#include "smarc/smarc.h"      //resampling library
+//#include "smarc/smarc.h"      //resampling library
 #include <time.h>       /* clock_t, clock, CLOCKS_PER_SEC */
 #include <numeric>      //std::accumulate
 #include <functional>   // bind2nd
@@ -654,96 +654,96 @@ void Xdf::syncTimeStamps()
     }
 }
 
-void Xdf::resample(int userSrate)
-{
-    //if user entered a preferred sample rate, we resample all the channels to that sample rate
-    //Otherwise, we resample all channels to the sample rate that has the most channels
+//void Xdf::resample(int userSrate)
+//{
+//    //if user entered a preferred sample rate, we resample all the channels to that sample rate
+//    //Otherwise, we resample all channels to the sample rate that has the most channels
 
-    clock_t time = clock();
+//    clock_t time = clock();
 
-#define BUF_SIZE 8192
-    for (auto &stream : streams)
-    {
-        if (!stream.time_series.empty() &&
-                stream.info.nominal_srate != userSrate &&
-                stream.info.nominal_srate != 0)
-        {
-            int fsin = stream.info.nominal_srate;       // input samplerate
-            int fsout = userSrate;                      // output samplerate
-            double bandwidth = 0.95;                    // bandwidth
-            double rp = 0.1;                            // passband ripple factor
-            double rs = 140;                            // stopband attenuation
-            double tol = 0.000001;                      // tolerance
+//#define BUF_SIZE 8192
+//    for (auto &stream : streams)
+//    {
+//        if (!stream.time_series.empty() &&
+//                stream.info.nominal_srate != userSrate &&
+//                stream.info.nominal_srate != 0)
+//        {
+//            int fsin = stream.info.nominal_srate;       // input samplerate
+//            int fsout = userSrate;                      // output samplerate
+//            double bandwidth = 0.95;                    // bandwidth
+//            double rp = 0.1;                            // passband ripple factor
+//            double rs = 140;                            // stopband attenuation
+//            double tol = 0.000001;                      // tolerance
 
-            // initialize smarc filter
-            struct PFilter* pfilt = smarc_init_pfilter(fsin, fsout, bandwidth, rp,
-                                                       rs, tol, NULL, 0);
-            if (pfilt == NULL)
-                continue;
+//            // initialize smarc filter
+//            struct PFilter* pfilt = smarc_init_pfilter(fsin, fsout, bandwidth, rp,
+//                                                       rs, tol, NULL, 0);
+//            if (pfilt == NULL)
+//                continue;
 
-            // initialize smarc filter state
-            struct PState* pstate = smarc_init_pstate(pfilt);
+//            // initialize smarc filter state
+//            struct PState* pstate = smarc_init_pstate(pfilt);
 
-            for (auto &row : stream.time_series)
-            {
-                // initialize buffers
-                int read = 0;
-                int written = 0;
-                const int OUT_BUF_SIZE = (int) smarc_get_output_buffer_size(pfilt, row.size());
-                double* inbuf = new double[row.size()];
-                double* outbuf = new double[OUT_BUF_SIZE];
-
-
-                std::copy(row.begin(), row.end(), inbuf);
-
-                read = row.size();
-
-                // resample signal block
-                written = smarc_resample(pfilt, pstate, inbuf, read, outbuf, OUT_BUF_SIZE);
-
-                // do what you want with your output
-                row.resize(written);
-                std::copy ( outbuf, outbuf+written, row.begin() );
-
-                // flushing last values
-                written = smarc_resample_flush(pfilt, pstate, outbuf, OUT_BUF_SIZE);
-
-                // do what you want with your output
-                row.resize(row.size() + written);
-                std::copy ( outbuf, outbuf+written, row.begin() + row.size() - written );
-
-                // you are done with converting your signal.
-                // If you want to reuse the same converter to process another signal
-                // just reset the state:
-                smarc_reset_pstate(pstate,pfilt);
-
-                delete[] inbuf;
-                delete[] outbuf;
-            }
-            // release smarc filter state
-            smarc_destroy_pstate(pstate);
-
-            // release smarc filter
-            smarc_destroy_pfilter(pfilt);
-        }
-    }
-    //resampling finishes here
+//            for (auto &row : stream.time_series)
+//            {
+//                // initialize buffers
+//                int read = 0;
+//                int written = 0;
+//                const int OUT_BUF_SIZE = (int) smarc_get_output_buffer_size(pfilt, row.size());
+//                double* inbuf = new double[row.size()];
+//                double* outbuf = new double[OUT_BUF_SIZE];
 
 
-    //======================================================================
-    //===========Calculating total length & total channel count=============
-    //======================================================================
+//                std::copy(row.begin(), row.end(), inbuf);
+
+//                read = row.size();
+
+//                // resample signal block
+//                written = smarc_resample(pfilt, pstate, inbuf, read, outbuf, OUT_BUF_SIZE);
+
+//                // do what you want with your output
+//                row.resize(written);
+//                std::copy ( outbuf, outbuf+written, row.begin() );
+
+//                // flushing last values
+//                written = smarc_resample_flush(pfilt, pstate, outbuf, OUT_BUF_SIZE);
+
+//                // do what you want with your output
+//                row.resize(row.size() + written);
+//                std::copy ( outbuf, outbuf+written, row.begin() + row.size() - written );
+
+//                // you are done with converting your signal.
+//                // If you want to reuse the same converter to process another signal
+//                // just reset the state:
+//                smarc_reset_pstate(pstate,pfilt);
+
+//                delete[] inbuf;
+//                delete[] outbuf;
+//            }
+//            // release smarc filter state
+//            smarc_destroy_pstate(pstate);
+
+//            // release smarc filter
+//            smarc_destroy_pfilter(pfilt);
+//        }
+//    }
+//    //resampling finishes here
 
 
-    calcTotalLength(userSrate);
+//    //======================================================================
+//    //===========Calculating total length & total channel count=============
+//    //======================================================================
 
-    adjustTotalLength();
 
-    time = clock() - time;
+//    calcTotalLength(userSrate);
 
-    std::cout << "it took " << time << " clicks (" << ((float)time) / CLOCKS_PER_SEC << " seconds)"
-              << " resampling" << std::endl;
-}
+//    adjustTotalLength();
+
+//    time = clock() - time;
+
+//    std::cout << "it took " << time << " clicks (" << ((float)time) / CLOCKS_PER_SEC << " seconds)"
+//              << " resampling" << std::endl;
+//}
 
 //function of reading the length of each chunk
 uint64_t Xdf::readLength(std::ifstream &file)
