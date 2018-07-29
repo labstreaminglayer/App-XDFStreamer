@@ -1,12 +1,11 @@
 #include "xdfstreamer.h"
 #include "ui_xdfstreamer.h"
-#include "extern/include/lsl_cpp.h"
+#include "lsl_cpp.h"
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QDebug>
 #include <ctime>
 
-using namespace lsl;
 
 XdfStreamer::XdfStreamer(QWidget *parent) :
     QMainWindow(parent),
@@ -45,19 +44,16 @@ void XdfStreamer::pushRandomSamples()
     const double dSamplingInterval = 1.0 / samplingRate;
     std::vector<double> sample(channelCount);
 
-//    QMessageBox::information(this, tr("Click to start streaming"), tr("Generating syntheric signals"), QMessageBox::Ok);
-
     double starttime = ((double)clock()) / CLOCKS_PER_SEC;
 
     for (unsigned t = 0;; t++) {
-        this->mutex_stop_thread.lock();
-        if (this->stop_thread) {
-            this->mutex_stop_thread.unlock();
-            return;
+        {
+            std::lock_guard<std::mutex> guard(this->mutex_stop_thread);
+            if (this->stop_thread) {
+                return;
+            }
         }
-        this->mutex_stop_thread.unlock();
 
-        // wait a bit and create random data
         while (((double)clock()) / CLOCKS_PER_SEC < starttime + t * dSamplingInterval);
 
         for (int c = 0; c < channelCount; c++) {
@@ -93,7 +89,7 @@ void XdfStreamer::openFilePicker()
 {
     QString fileName = QFileDialog::getOpenFileName(this, tr("Open XDF File"), "", tr("XDF Files (*.xdf)"));
 
-    if (fileName.compare("") != 0) {
+    if (!fileName.isEmpty()) {
         ui->lineEdit->setText(fileName);
     }
 }
@@ -140,8 +136,8 @@ void XdfStreamer::on_pushButton_clicked()
 
             this->pushThread = new std::thread(&XdfStreamer::pushRandomSamples, this);
         }
-        //        else {
-//            qDebug() << "Load XDF";
+        else {
+            qDebug() << "Load XDF";
 
 //            QString streamName = ui->lineEdit_2->text();
 //            const int samplingRate = ui->spinBox->value();
@@ -185,7 +181,7 @@ void XdfStreamer::on_pushButton_clicked()
 //                    outlet.push_sample(sample);
 //                }
 //            }
-//        }
+        }
     }
     else {
         this->mutex_stop_thread.lock();
