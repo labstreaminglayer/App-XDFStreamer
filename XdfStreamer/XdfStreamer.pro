@@ -39,7 +39,9 @@ HEADERS += \
 FORMS += \
         xdfstreamer.ui
 
-unix|win32: LIBS += -L$$PWD/extern/bin/ -lliblsl32-debug
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/extern/bin/ -lliblsl32
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/extern/bin/ -lliblsl32-debug
+else:unix: LIBS += -L$$PWD/extern/bin/ -lliblsl32
 
 INCLUDEPATH += $$PWD/extern/include
 DEPENDPATH += $$PWD/extern/include
