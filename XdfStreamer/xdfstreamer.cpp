@@ -27,7 +27,6 @@ XdfStreamer::XdfStreamer(QWidget *parent) :
     QObject::connect(ui->checkBox, SIGNAL(stateChanged(int)), this, SLOT(enableFilePicker(int)));
     QObject::connect(ui->toolButton, SIGNAL(clicked()), this, SLOT(openFilePicker()));
     QObject::connect(ui->pushButton_2, SIGNAL(clicked()), this, SLOT(handleXdfFile()));
-    QObject::connect(ui->lineEdit, SIGNAL(textChanged(QString)), this, SLOT(on_lineEdit_textChanged(QString)));
 }
 
 XdfStreamer::~XdfStreamer()
