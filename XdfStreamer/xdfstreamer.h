@@ -28,7 +28,7 @@ private:
     void pushRandomSamples();
 
 private slots:
-    void enableFilePicker(int status);
+    void on_checkBox_stateChanged(int status);
     void openFilePicker();
     void handleXdfFile();
     void on_lineEdit_textChanged(const QString &arg1);

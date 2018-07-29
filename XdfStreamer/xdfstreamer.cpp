@@ -6,7 +6,6 @@
 #include <QDebug>
 #include <ctime>
 
-
 XdfStreamer::XdfStreamer(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::XdfStreamer)
@@ -21,9 +20,13 @@ XdfStreamer::XdfStreamer(QWidget *parent) :
     ui->lineEdit_2->hide();
     ui->label_4->hide();
     ui->spinBox_2->hide();
+    ui->label_5->hide();
+    ui->lineEdit_3->setText("EEG");
+    ui->lineEdit_3->hide();
+    ui->groupBox_2->hide();
     setWindowTitle("XDF Streamer");
 
-    QObject::connect(ui->checkBox, SIGNAL(stateChanged(int)), this, SLOT(enableFilePicker(int)));
+    QObject::connect(ui->checkBox, SIGNAL(stateChanged(int)), this, SLOT(on_checkBox_stateChanged(int)));
     QObject::connect(ui->toolButton, SIGNAL(clicked()), this, SLOT(openFilePicker()));
     QObject::connect(ui->pushButton_2, SIGNAL(clicked()), this, SLOT(handleXdfFile()));
 }
@@ -64,7 +67,7 @@ void XdfStreamer::pushRandomSamples()
     }
 }
 
-void XdfStreamer::enableFilePicker(int status)
+void XdfStreamer::on_checkBox_stateChanged(int status)
 {
     bool enabled = status == Qt::Checked ? false : true;
     ui->label->setEnabled(enabled);
@@ -78,10 +81,20 @@ void XdfStreamer::enableFilePicker(int status)
         ui->label_3->show();
         ui->lineEdit_2->show();
         ui->lineEdit_2->setText("ActiChamp-0");
+        ui->label_4->show();
+        ui->spinBox_2->show();
+        ui->label_5->show();
+        ui->lineEdit_3->show();
+        ui->groupBox_2->show();
     }
     else {
         ui->label_3->hide();
         ui->lineEdit_2->hide();
+        ui->label_4->hide();
+        ui->spinBox_2->hide();
+        ui->label_5->hide();
+        ui->lineEdit_3->hide();
+        ui->groupBox_2->hide();
     }
 }
 
