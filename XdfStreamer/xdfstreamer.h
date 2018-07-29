@@ -25,6 +25,7 @@ private slots:
     void openFilePicker();
     void handleXdfFile();
     void on_lineEdit_textChanged(const QString &arg1);
+    void on_pushButton_clicked();
 };
 
 #endif // XDFSTREAMER_H
