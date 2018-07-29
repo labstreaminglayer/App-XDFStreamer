@@ -22,7 +22,6 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
-
 SOURCES += \
         main.cpp \
         xdfstreamer.cpp \
@@ -33,7 +32,14 @@ HEADERS += \
         xdfstreamer.h \
     libxdf/pugixml/pugiconfig.hpp \
     libxdf/pugixml/pugixml.hpp \
-    libxdf/xdf.h
+    libxdf/xdf.h \
+    extern/include/lsl_c.h \
+    extern/include/lsl_cpp.h
 
 FORMS += \
         xdfstreamer.ui
+
+unix|win32: LIBS += -L$$PWD/extern/bin/ -lliblsl32-debug
+
+INCLUDEPATH += $$PWD/extern/include
+DEPENDPATH += $$PWD/extern/include
