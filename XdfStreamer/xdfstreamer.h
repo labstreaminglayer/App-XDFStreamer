@@ -3,6 +3,8 @@
 
 #include "libxdf/xdf.h"
 #include <QMainWindow>
+#include <thread>
+#include <mutex>
 
 namespace Ui {
 class XdfStreamer;
@@ -19,6 +21,11 @@ public:
 private:
     Ui::XdfStreamer *ui;
     QSharedPointer<Xdf> xdf;
+    std::thread *pushThread = nullptr;
+    bool stop_thread = false;
+    std::mutex mutex_stop_thread;
+
+    void pushRandomSamples();
 
 private slots:
     void enableFilePicker(int status);

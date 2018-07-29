@@ -28,12 +28,45 @@ XdfStreamer::XdfStreamer(QWidget *parent) :
     QObject::connect(ui->toolButton, SIGNAL(clicked()), this, SLOT(openFilePicker()));
     QObject::connect(ui->pushButton_2, SIGNAL(clicked()), this, SLOT(handleXdfFile()));
     QObject::connect(ui->lineEdit, SIGNAL(textChanged(QString)), this, SLOT(on_lineEdit_textChanged(QString)));
-    QObject::connect(ui->pushButton, SIGNAL(clicked()), this, SLOT(on_pushButton_clicked()));
 }
 
 XdfStreamer::~XdfStreamer()
 {
     delete ui;
+}
+
+void XdfStreamer::pushRandomSamples()
+{
+    QString streamName = ui->lineEdit_2->text();
+    const int samplingRate = ui->spinBox->value();
+    int channelCount = ui->spinBox_2->value();
+    lsl::stream_info info(streamName.toStdString(), "EEG", channelCount, (double)samplingRate, lsl::cf_double64, "RT_Sender_SimulationPC");
+    lsl::stream_outlet outlet(info);
+
+    const double dSamplingInterval = 1.0 / samplingRate;
+    std::vector<double> sample(channelCount);
+
+//    QMessageBox::information(this, tr("Click to start streaming"), tr("Generating syntheric signals"), QMessageBox::Ok);
+
+    double starttime = ((double)clock()) / CLOCKS_PER_SEC;
+
+    for (unsigned t = 0;; t++) {
+        this->mutex_stop_thread.lock();
+        if (this->stop_thread) {
+            this->mutex_stop_thread.unlock();
+            return;
+        }
+        this->mutex_stop_thread.unlock();
+
+        // wait a bit and create random data
+        while (((double)clock()) / CLOCKS_PER_SEC < starttime + t * dSamplingInterval);
+
+        for (int c = 0; c < channelCount; c++) {
+            sample[c] = (rand() % 1500) / 500.0 - 1.5;
+        }
+
+        outlet.push_sample(sample);
+    }
 }
 
 void XdfStreamer::enableFilePicker(int status)
@@ -104,40 +137,10 @@ void XdfStreamer::on_pushButton_clicked()
         ui->pushButton->setText("Stop");
 
         if (ui->checkBox->isChecked()) {
-            qDebug() << "Simulating";
+            qDebug() << "Generating synthetic signals";
 
-            QString streamName = ui->lineEdit_2->text();
-            const int samplingRate = ui->spinBox->value();
-            int channelCount = ui->spinBox_2->value();
-            lsl::stream_info info(streamName.toStdString(), "EEG", channelCount, (double)samplingRate, lsl::cf_double64, "RT_Sender_SimulationPC");
-//            lsl::stream_outlet outlet(info);
-
-//            const double dSamplingInterval = 1.0 / samplingRate;
-//            std::vector<double> sample(channelCount);
-
-//            QMessageBox::information(this, tr("Click to start streaming"), tr("Generating syntheric signals"), QMessageBox::Ok);
-
-//            double starttime = ((double)clock()) / CLOCKS_PER_SEC;
-
-//            for (unsigned t = 0;; t++) {
-//                // wait a bit and create random data
-//                while (((double)clock()) / CLOCKS_PER_SEC < starttime + t * dSamplingInterval);
-
-//                for (int c = 0; c < channelCount; c++) {
-//                    sample[c] = (rand() % 1500) / 500.0 - 1.5;
-//                }
-
-//                outlet.push_sample(sample);
-//            }
+            this->pushThread = new std::thread(&XdfStreamer::pushRandomSamples, this);
         }
-
-
-
-
-
-
-
-
         //        else {
 //            qDebug() << "Load XDF";
 
@@ -184,5 +187,15 @@ void XdfStreamer::on_pushButton_clicked()
 //                }
 //            }
 //        }
+    }
+    else {
+        this->mutex_stop_thread.lock();
+        this->stop_thread = true;
+        this->mutex_stop_thread.unlock();
+
+        ui->pushButton->setText("Stream");
+        this->pushThread->join();
+        delete this->pushThread;
+        this->pushThread = nullptr;
     }
 }
