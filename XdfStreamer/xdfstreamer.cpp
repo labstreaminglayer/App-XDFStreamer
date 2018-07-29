@@ -31,12 +31,14 @@ void XdfStreamer::enableFilePicker(int status)
     ui->label->setEnabled(enabled);
     ui->lineEdit->setEnabled(enabled);
     ui->toolButton->setEnabled(enabled);
+    ui->pushButton->setEnabled(!enabled);
+    bool loadButtonEnabled = ui->lineEdit->text().isEmpty() ? false : enabled;
+    ui->pushButton_2->setEnabled(loadButtonEnabled);
 }
 
 void XdfStreamer::openFilePicker()
 {
-    QString fileName = QFileDialog::getOpenFileName(this,
-                                                    tr("Open XDF File"), "", tr("XDF Files (*.xdf)"));
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Open XDF File"), "", tr("XDF Files (*.xdf)"));
 
     if (fileName.compare("") != 0) {
         ui->lineEdit->setText(fileName);
@@ -49,16 +51,18 @@ void XdfStreamer::handleXdfFile()
         this->xdf = QSharedPointer<Xdf>(new Xdf);
         this->xdf->load_xdf(ui->lineEdit->text().toStdString());
 
-        if (this->xdf.isNull()) {
+        if (this->xdf->streams.empty()) {
             QString msg = "Unable to find " + ui->lineEdit->text() + "\nPlease check your path";
             QMessageBox::warning(this, tr("XDF Streamer"), msg, QMessageBox::Ok);
         }
         else {
+            ui->pushButton->setEnabled(true);
             ui->pushButton_2->setText("Unload");
         }
     }
     else {
         this->xdf.clear();
+        ui->pushButton->setEnabled(false);
         ui->pushButton_2->setText("Load");
     }
 }
