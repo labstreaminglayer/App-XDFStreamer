@@ -326,12 +326,16 @@ void XdfStreamer::on_pushButton_clicked()
 
             this->pushThread = new std::thread(&XdfStreamer::pushXdfData, this);
         }
+        ui->treeWidget->setEnabled(false);
+        ui->treeWidget_2->setEnabled(false);
     }
     else {
         this->mutex_stop_thread.lock();
         this->stop_thread = true;
         this->mutex_stop_thread.unlock();
 
+        ui->treeWidget->setEnabled(true);
+        ui->treeWidget_2->setEnabled(true);
         ui->pushButton->setText("Stream");
         this->pushThread->join();
         delete this->pushThread;
