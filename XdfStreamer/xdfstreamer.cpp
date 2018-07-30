@@ -243,10 +243,21 @@ void XdfStreamer::on_pushButton_2_clicked()
             ui->treeWidget->header()->show();
             ui->treeWidget->setColumnWidth(0, std::round(0.5 * ui->treeWidget->width()));
 
+            /* Get first stream that is not a string stream */
+            int streamIdx = -1;
+            for (size_t k = 0; k < this->xdf->streams.size(); k++) {
+                if (this->xdf->streams[k].info.channel_format.compare("string") != 0) {
+                    streamIdx = (int)k;
+                    ui->spinBox->setValue((int)this->xdf->streams[k].info.nominal_srate);
+                    break;
+                }
+            }
+
             for (size_t k = 0; k < this->xdf->streams.size(); k++) {
                 QTreeWidgetItem *item = new QTreeWidgetItem(ui->treeWidget);
                 item->setText(0, "Stream-" + QString::number(k+1));
-                item->setCheckState(0, k == 0 ? Qt::Checked : Qt::Unchecked);
+                item->setCheckState(0, (int)k == streamIdx ? Qt::Checked : Qt::Unchecked);
+                item->setDisabled(this->xdf->streams[k].info.channel_format.compare("string") == 0 ? true : false);
 
                 QTreeWidgetItem *subItem = new QTreeWidgetItem(item);
                 subItem->setText(0, "Stream Name");
@@ -261,7 +272,7 @@ void XdfStreamer::on_pushButton_2_clicked()
                 item->addChild(subItem);
 
                 subItem = new QTreeWidgetItem(item);
-                subItem->setText(0, "Samplign Rate");
+                subItem->setText(0, "Sampling Rate");
                 subItem->setText(1, QString::number(this->xdf->streams[k].info.nominal_srate));
                 subItem->setDisabled(this->xdf->streams[k].info.channel_format.compare("string") == 0 ? true : false);
                 item->addChild(subItem);
@@ -281,7 +292,7 @@ void XdfStreamer::on_pushButton_2_clicked()
                 ui->treeWidget->addTopLevelItem(item);
             }
             ui->treeWidget->expandAll();
-            this->stream_ready = true;
+            this->stream_ready = streamIdx != -1 ? true : false;
         }
     }
     else {
@@ -339,6 +350,7 @@ void XdfStreamer::on_treeWidget_itemClicked(QTreeWidgetItem *item)
         while (*it) {
             if ((*it) == item) {
                 this->stream_idx = idx;
+                ui->spinBox->setValue(std::round(this->xdf->streams[idx].info.nominal_srate));
             }
 
             if ((*it)->checkState(0) == Qt::Checked && (*it) != item) {
