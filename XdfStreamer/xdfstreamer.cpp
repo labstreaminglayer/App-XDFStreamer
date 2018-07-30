@@ -48,7 +48,8 @@ void XdfStreamer::pushRandomSamples()
     QString streamName = ui->lineEdit_2->text();
     const int samplingRate = ui->spinBox->value();
     int channelCount = ui->spinBox_2->value();
-    lsl::stream_info info(streamName.toStdString(), "EEG", channelCount, (double)samplingRate, lsl::cf_double64, "RT_Sender_SimulationPC");
+    std::string streamType = ui->lineEdit_3->text().toStdString();
+    lsl::stream_info info(streamName.toStdString(), streamType, channelCount, (double)samplingRate, lsl::cf_double64, "RT_Sender_SimulationPC");
     lsl::stream_outlet outlet(info);
 
     const double dSamplingInterval = 1.0 / samplingRate;
