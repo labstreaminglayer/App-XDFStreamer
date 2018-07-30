@@ -24,6 +24,12 @@ XdfStreamer::XdfStreamer(QWidget *parent) :
     ui->lineEdit_3->setText("EEG");
     ui->lineEdit_3->hide();
     ui->groupBox_2->hide();
+    ui->treeWidget->setColumnCount(2);
+
+    QStringList header = {"Property", "Value"};
+    ui->treeWidget->setHeaderLabels(header);
+    ui->treeWidget->header()->hide();
+
     setWindowTitle("XDF Streamer");
 
     QObject::connect(ui->checkBox, SIGNAL(stateChanged(int)), this, SLOT(on_checkBox_stateChanged(int)));
@@ -120,6 +126,37 @@ void XdfStreamer::handleXdfFile()
         else {
             ui->pushButton->setEnabled(true);
             ui->pushButton_2->setText("Unload");
+            ui->treeWidget->header()->show();
+            ui->treeWidget->setColumnWidth(0, std::round(0.5 * ui->treeWidget->width()));
+
+            for (size_t k = 0; k < this->xdf->streams.size(); k++) {
+                QTreeWidgetItem *item = new QTreeWidgetItem(ui->treeWidget);
+                item->setText(0, "Stream-" + QString::number(k+1));
+                item->setCheckState(0, k == 0 ? Qt::Checked : Qt::Unchecked);
+
+                QTreeWidgetItem *subItem = new QTreeWidgetItem(item);
+                subItem->setText(0, "Stream Name");
+                subItem->setText(1, QString::fromStdString(this->xdf->streams[k].info.name));
+                item->addChild(subItem);
+
+                subItem = new QTreeWidgetItem(item);
+                subItem->setText(0, "Channel Format");
+                subItem->setText(1, QString::fromStdString(this->xdf->streams[k].info.channel_format));
+                item->addChild(subItem);
+
+                subItem = new QTreeWidgetItem(item);
+                subItem->setText(0, "Samplign Rate");
+                subItem->setText(1, QString::number(this->xdf->streams[k].info.nominal_srate));
+                item->addChild(subItem);
+
+                subItem = new QTreeWidgetItem(item);
+                subItem->setText(0, "Channel Count");
+                subItem->setText(1, QString::number(this->xdf->streams[k].info.channel_count));
+                item->addChild(subItem);
+
+                ui->treeWidget->addTopLevelItem(item);
+            }
+            ui->treeWidget->expandAll();
         }
     }
     else {
@@ -152,48 +189,48 @@ void XdfStreamer::on_pushButton_clicked()
         else {
             qDebug() << "Load XDF";
 
-//            QString streamName = ui->lineEdit_2->text();
-//            const int samplingRate = ui->spinBox->value();
-//            const int channelCount = 32;
-//            lsl::stream_info info(streamName.toStdString(), "EEG", channelCount, (double)samplingRate, lsl::cf_double64, "RT_Sender_SimulationPC");
-//            lsl::stream_outlet outlet(info);
+            //            QString streamName = ui->lineEdit_2->text();
+            //            const int samplingRate = ui->spinBox->value();
+            //            const int channelCount = 32;
+            //            lsl::stream_info info(streamName.toStdString(), "EEG", channelCount, (double)samplingRate, lsl::cf_double64, "RT_Sender_SimulationPC");
+            //            lsl::stream_outlet outlet(info);
 
-//            const double dSamplingInterval = 1.0 / samplingRate;
-//            double sample[channelCount];
+            //            const double dSamplingInterval = 1.0 / samplingRate;
+            //            double sample[channelCount];
 
-//            //===============================================================================================================
-//            // Get Raw Stream Index
-//            //===============================================================================================================
-//            int streamIdx = -1;
+            //            //===============================================================================================================
+            //            // Get Raw Stream Index
+            //            //===============================================================================================================
+            //            int streamIdx = -1;
 
-//            for (size_t k = 0; k < this->xdf->streams.size(); k++) {
-//                if (this->xdf->streams[k].info.name.compare("ActiChamp-0") == 0) {
-//                    streamIdx = k;
-//                    break;
-//                }
-//            }
+            //            for (size_t k = 0; k < this->xdf->streams.size(); k++) {
+            //                if (this->xdf->streams[k].info.name.compare("ActiChamp-0") == 0) {
+            //                    streamIdx = k;
+            //                    break;
+            //                }
+            //            }
 
-//            //===============================================================================================================
-//            // Push samples to LSL
-//            //===============================================================================================================
-//            if (streamIdx == -1) {
-//                qDebug() << "Didn't find the data stream.";
-//            }
-//            else {
-//                QMessageBox::information(this, tr("Click to start streaming"), tr("Loading XDF file successful"), QMessageBox::Ok);
+            //            //===============================================================================================================
+            //            // Push samples to LSL
+            //            //===============================================================================================================
+            //            if (streamIdx == -1) {
+            //                qDebug() << "Didn't find the data stream.";
+            //            }
+            //            else {
+            //                QMessageBox::information(this, tr("Click to start streaming"), tr("Loading XDF file successful"), QMessageBox::Ok);
 
-//                double starttime = ((double)clock()) / CLOCKS_PER_SEC;
+            //                double starttime = ((double)clock()) / CLOCKS_PER_SEC;
 
-//                for (unsigned t = 0; t < xdf->streams[streamIdx].time_series.front().size(); t++) {
-//                    while (((double)clock()) / CLOCKS_PER_SEC < starttime + t * dSamplingInterval);
+            //                for (unsigned t = 0; t < xdf->streams[streamIdx].time_series.front().size(); t++) {
+            //                    while (((double)clock()) / CLOCKS_PER_SEC < starttime + t * dSamplingInterval);
 
-//                    for (int c = 0; c < channelCount; c++) {
-//                        sample[c] = xdf->streams[streamIdx].time_series[c][t];
-//                    }
+            //                    for (int c = 0; c < channelCount; c++) {
+            //                        sample[c] = xdf->streams[streamIdx].time_series[c][t];
+            //                    }
 
-//                    outlet.push_sample(sample);
-//                }
-//            }
+            //                    outlet.push_sample(sample);
+            //                }
+            //            }
         }
     }
     else {
