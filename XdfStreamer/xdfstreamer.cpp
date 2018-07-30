@@ -118,16 +118,19 @@ void XdfStreamer::clearCache()
 
 void XdfStreamer::enableControlPanel(bool enabled)
 {
-    ui->label->setEnabled(enabled);
+    if (ui->checkBox->checkState() == Qt::Unchecked) {
+        ui->label->setEnabled(enabled);
+        ui->lineEdit->setEnabled(enabled);
+        ui->toolButton->setEnabled(enabled);
+        ui->pushButton_2->setEnabled(enabled);
+    }
+
     ui->label_2->setEnabled(enabled);
     ui->label_3->setEnabled(enabled);
     ui->label_4->setEnabled(enabled);
     ui->label_5->setEnabled(enabled);
-    ui->lineEdit->setEnabled(enabled);
     ui->lineEdit_2->setEnabled(enabled);
     ui->lineEdit_3->setEnabled(enabled);
-    ui->toolButton->setEnabled(enabled);
-    ui->pushButton_2->setEnabled(enabled);
     ui->checkBox->setEnabled(enabled);
     ui->spinBox->setEnabled(enabled);
     ui->spinBox_2->setEnabled(enabled);
