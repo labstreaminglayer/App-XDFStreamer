@@ -110,6 +110,7 @@ void XdfStreamer::openFilePicker()
 
     if (!fileName.isEmpty()) {
         ui->lineEdit->setText(fileName);
+        handleXdfFile();
     }
 }
 
@@ -163,6 +164,8 @@ void XdfStreamer::handleXdfFile()
         this->xdf.clear();
         ui->pushButton->setEnabled(false);
         ui->pushButton_2->setText("Load");
+        ui->treeWidget->header()->hide();
+        ui->treeWidget->clear();
     }
 }
 
