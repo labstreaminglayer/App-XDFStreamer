@@ -48,7 +48,8 @@ void XdfStreamer::pushRandomSamples()
     QString streamName = ui->lineEdit_2->text();
     const int samplingRate = ui->spinBox->value();
     int channelCount = ui->spinBox_2->value();
-    lsl::stream_info info(streamName.toStdString(), "EEG", channelCount, (double)samplingRate, lsl::cf_double64, "RT_Sender_SimulationPC");
+    std::string streamType = ui->lineEdit_3->text().toStdString();
+    lsl::stream_info info(streamName.toStdString(), streamType, channelCount, (double)samplingRate, lsl::cf_double64, "RT_Sender_SimulationPC");
     lsl::stream_outlet outlet(info);
 
     const double dSamplingInterval = 1.0 / samplingRate;
@@ -88,6 +89,13 @@ void XdfStreamer::pushXdfData()
     double starttime = ((double)clock()) / CLOCKS_PER_SEC;
 
     for (unsigned t = 0; t < xdf->streams[this->stream_idx].time_series.front().size(); t++) {
+        {
+            std::lock_guard<std::mutex> guard(this->mutex_stop_thread);
+            if (this->stop_thread) {
+                return;
+            }
+        }
+
         while (((double)clock()) / CLOCKS_PER_SEC < starttime + t * dSamplingInterval);
 
         for (int c = 0; c < channelCount; c++) {
@@ -110,16 +118,19 @@ void XdfStreamer::clearCache()
 
 void XdfStreamer::enableControlPanel(bool enabled)
 {
-    ui->label->setEnabled(enabled);
+    if (ui->checkBox->checkState() == Qt::Unchecked) {
+        ui->label->setEnabled(enabled);
+        ui->lineEdit->setEnabled(enabled);
+        ui->toolButton->setEnabled(enabled);
+        ui->pushButton_2->setEnabled(enabled);
+    }
+
     ui->label_2->setEnabled(enabled);
     ui->label_3->setEnabled(enabled);
     ui->label_4->setEnabled(enabled);
     ui->label_5->setEnabled(enabled);
-    ui->lineEdit->setEnabled(enabled);
     ui->lineEdit_2->setEnabled(enabled);
     ui->lineEdit_3->setEnabled(enabled);
-    ui->toolButton->setEnabled(enabled);
-    ui->pushButton_2->setEnabled(enabled);
     ui->checkBox->setEnabled(enabled);
     ui->spinBox->setEnabled(enabled);
     ui->spinBox_2->setEnabled(enabled);
@@ -294,6 +305,7 @@ void XdfStreamer::on_pushButton_clicked()
     if (ui->pushButton->text().compare("Stream") == 0) {
         ui->pushButton->setText("Stop");
         this->enableControlPanel(false);
+        this->stop_thread = false;
 
         if (ui->checkBox->isChecked()) {
             qDebug() << "Generating synthetic signals";
