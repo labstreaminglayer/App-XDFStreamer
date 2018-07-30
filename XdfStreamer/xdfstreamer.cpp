@@ -73,13 +73,29 @@ void XdfStreamer::pushRandomSamples()
     }
 }
 
+void XdfStreamer::clearCache()
+{
+    this->xdf.clear();
+    ui->pushButton->setEnabled(false);
+    ui->pushButton_2->setText("Load");
+    ui->treeWidget->header()->hide();
+    ui->treeWidget->clear();
+    this->stream_ready = false;
+}
+
 void XdfStreamer::on_checkBox_stateChanged(int status)
 {
+    if (status == Qt::Checked) {
+        ui->pushButton->setEnabled(true);
+    }
+    else {
+        ui->pushButton->setEnabled(this->stream_ready ? true : false);
+    }
+
     bool enabled = status == Qt::Checked ? false : true;
     ui->label->setEnabled(enabled);
     ui->lineEdit->setEnabled(enabled);
     ui->toolButton->setEnabled(enabled);
-    ui->pushButton->setEnabled(!enabled);
     bool loadButtonEnabled = ui->lineEdit->text().isEmpty() ? false : enabled;
     ui->pushButton_2->setEnabled(loadButtonEnabled);
 
@@ -109,6 +125,7 @@ void XdfStreamer::openFilePicker()
     QString fileName = QFileDialog::getOpenFileName(this, tr("Open XDF File"), "", tr("XDF Files (*.xdf)"));
 
     if (!fileName.isEmpty()) {
+        this->clearCache();
         ui->lineEdit->setText(fileName);
         handleXdfFile();
     }
@@ -158,14 +175,11 @@ void XdfStreamer::handleXdfFile()
                 ui->treeWidget->addTopLevelItem(item);
             }
             ui->treeWidget->expandAll();
+            this->stream_ready = true;
         }
     }
     else {
-        this->xdf.clear();
-        ui->pushButton->setEnabled(false);
-        ui->pushButton_2->setText("Load");
-        ui->treeWidget->header()->hide();
-        ui->treeWidget->clear();
+        this->clearCache();
     }
 }
 
