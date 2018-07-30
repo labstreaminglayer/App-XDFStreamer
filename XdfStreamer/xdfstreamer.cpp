@@ -76,45 +76,25 @@ void XdfStreamer::pushRandomSamples()
 
 void XdfStreamer::pushXdfData()
 {
-    QString streamName = "Sample Stream";
+    std::string streamName = this->xdf->streams[this->stream_idx].info.name;
     const int samplingRate = ui->spinBox->value();
-    int channelCount = this->xdf->streams[0].info.channel_count;
-    lsl::stream_info info(streamName.toStdString(), "EEG", channelCount, (double)samplingRate, lsl::cf_double64, "RT_Sender_SimulationPC");
+    size_t channelCount = this->xdf->streams[this->stream_idx].info.channel_count;
+    lsl::stream_info info(streamName, "EEG", channelCount, (double)samplingRate, lsl::cf_double64, "RT_Sender_SimulationPC");
     lsl::stream_outlet outlet(info);
 
     const double dSamplingInterval = 1.0 / samplingRate;
     std::vector<double> sample(channelCount);
 
-    //===============================================================================================================
-    // Get Raw Stream Index
-    //===============================================================================================================
-    int stream_idx = -1;
+    double starttime = ((double)clock()) / CLOCKS_PER_SEC;
 
-    for (size_t k = 0; k < this->xdf->streams.size(); k++) {
-        if (this->xdf->streams[k].info.channel_format.compare("string") != 0) {
-            stream_idx = k;
-            break;
+    for (unsigned t = 0; t < xdf->streams[this->stream_idx].time_series.front().size(); t++) {
+        while (((double)clock()) / CLOCKS_PER_SEC < starttime + t * dSamplingInterval);
+
+        for (int c = 0; c < channelCount; c++) {
+            sample[c] = xdf->streams[stream_idx].time_series[c][t];
         }
-    }
 
-    //===============================================================================================================
-    // Push samples to LSL
-    //===============================================================================================================
-    if (stream_idx == -1) {
-        qDebug() << "Didn't find the data stream.";
-    }
-    else {
-        double starttime = ((double)clock()) / CLOCKS_PER_SEC;
-
-        for (unsigned t = 0; t < xdf->streams[stream_idx].time_series.front().size(); t++) {
-            while (((double)clock()) / CLOCKS_PER_SEC < starttime + t * dSamplingInterval);
-
-            for (int c = 0; c < channelCount; c++) {
-                sample[c] = xdf->streams[stream_idx].time_series[c][t];
-            }
-
-            outlet.push_sample(sample);
-        }
+        outlet.push_sample(sample);
     }
 }
 
@@ -244,10 +224,9 @@ void XdfStreamer::on_pushButton_2_clicked()
             ui->treeWidget->setColumnWidth(0, std::round(0.5 * ui->treeWidget->width()));
 
             /* Get first stream that is not a string stream */
-            int streamIdx = -1;
             for (size_t k = 0; k < this->xdf->streams.size(); k++) {
                 if (this->xdf->streams[k].info.channel_format.compare("string") != 0) {
-                    streamIdx = (int)k;
+                    this->stream_idx = k;
                     ui->spinBox->setValue((int)this->xdf->streams[k].info.nominal_srate);
                     break;
                 }
@@ -256,7 +235,7 @@ void XdfStreamer::on_pushButton_2_clicked()
             for (size_t k = 0; k < this->xdf->streams.size(); k++) {
                 QTreeWidgetItem *item = new QTreeWidgetItem(ui->treeWidget);
                 item->setText(0, "Stream-" + QString::number(k+1));
-                item->setCheckState(0, (int)k == streamIdx ? Qt::Checked : Qt::Unchecked);
+                item->setCheckState(0, (int)k == this->stream_idx ? Qt::Checked : Qt::Unchecked);
                 item->setDisabled(this->xdf->streams[k].info.channel_format.compare("string") == 0 ? true : false);
 
                 QTreeWidgetItem *subItem = new QTreeWidgetItem(item);
@@ -292,7 +271,7 @@ void XdfStreamer::on_pushButton_2_clicked()
                 ui->treeWidget->addTopLevelItem(item);
             }
             ui->treeWidget->expandAll();
-            this->stream_ready = streamIdx != -1 ? true : false;
+            this->stream_ready = this->stream_idx != -1 ? true : false;
         }
     }
     else {
@@ -349,12 +328,10 @@ void XdfStreamer::on_treeWidget_itemClicked(QTreeWidgetItem *item)
     QTreeWidgetItemIterator it(ui->treeWidget);
 
     if (item->checkState(0) == Qt::Checked) {
-        size_t idx = 0;
-
         for (int k = 0; k < ui->treeWidget->topLevelItemCount(); k++) {
             if (ui->treeWidget->topLevelItem(k) == item) {
-                this->stream_idx = idx;
-                ui->spinBox->setValue(std::round(this->xdf->streams[idx].info.nominal_srate));
+                this->stream_idx = k;
+                ui->spinBox->setValue(std::round(this->xdf->streams[k].info.nominal_srate));
             }
             else {
                 ui->treeWidget->topLevelItem(k)->setCheckState(0, Qt::Unchecked);

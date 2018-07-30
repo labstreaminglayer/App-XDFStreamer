@@ -26,7 +26,7 @@ private:
     bool stop_thread = false;
     std::mutex mutex_stop_thread;
     bool stream_ready = false;
-    size_t stream_idx = 0;
+    size_t stream_idx = -1;
 
     void pushRandomSamples();
     void pushXdfData();
