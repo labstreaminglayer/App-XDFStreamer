@@ -89,6 +89,13 @@ void XdfStreamer::pushXdfData()
     double starttime = ((double)clock()) / CLOCKS_PER_SEC;
 
     for (unsigned t = 0; t < xdf->streams[this->stream_idx].time_series.front().size(); t++) {
+        {
+            std::lock_guard<std::mutex> guard(this->mutex_stop_thread);
+            if (this->stop_thread) {
+                return;
+            }
+        }
+
         while (((double)clock()) / CLOCKS_PER_SEC < starttime + t * dSamplingInterval);
 
         for (int c = 0; c < channelCount; c++) {
@@ -295,6 +302,7 @@ void XdfStreamer::on_pushButton_clicked()
     if (ui->pushButton->text().compare("Stream") == 0) {
         ui->pushButton->setText("Stop");
         this->enableControlPanel(false);
+        this->stop_thread = false;
 
         if (ui->checkBox->isChecked()) {
             qDebug() << "Generating synthetic signals";
