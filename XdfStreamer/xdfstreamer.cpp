@@ -351,17 +351,14 @@ void XdfStreamer::on_treeWidget_itemClicked(QTreeWidgetItem *item)
     if (item->checkState(0) == Qt::Checked) {
         size_t idx = 0;
 
-        while (*it) {
-            if ((*it) == item) {
+        for (int k = 0; k < ui->treeWidget->topLevelItemCount(); k++) {
+            if (ui->treeWidget->topLevelItem(k) == item) {
                 this->stream_idx = idx;
                 ui->spinBox->setValue(std::round(this->xdf->streams[idx].info.nominal_srate));
             }
-
-            if ((*it)->checkState(0) == Qt::Checked && (*it) != item) {
-                (*it)->setCheckState(0, Qt::Unchecked);
+            else {
+                ui->treeWidget->topLevelItem(k)->setCheckState(0, Qt::Unchecked);
             }
-            ++it;
-            ++idx;
         }
     }
 }
