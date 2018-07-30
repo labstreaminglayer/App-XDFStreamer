@@ -24,15 +24,19 @@ XdfStreamer::XdfStreamer(QWidget *parent) :
     ui->lineEdit_3->setText("EEG");
     ui->lineEdit_3->hide();
     ui->groupBox_2->hide();
-    ui->treeWidget->setColumnCount(2);
 
     QStringList header = {"Property", "Value"};
     ui->treeWidget->setHeaderLabels(header);
     ui->treeWidget->header()->hide();
+    ui->treeWidget->setColumnCount(2);
+
+    ui->treeWidget_2->setHeaderLabels(header);
+    ui->treeWidget_2->header()->hide();
+    ui->treeWidget_2->setColumnCount(2);
+    ui->treeWidget_2->hide();
 
     setWindowTitle("XDF Streamer");
 
-    QObject::connect(ui->checkBox, SIGNAL(stateChanged(int)), this, SLOT(on_checkBox_stateChanged(int)));
     QObject::connect(ui->toolButton, SIGNAL(clicked()), this, SLOT(openFilePicker()));
     QObject::connect(ui->pushButton_2, SIGNAL(clicked()), this, SLOT(handleXdfFile()));
 }
@@ -87,19 +91,6 @@ void XdfStreamer::on_checkBox_stateChanged(int status)
 {
     if (status == Qt::Checked) {
         ui->pushButton->setEnabled(true);
-    }
-    else {
-        ui->pushButton->setEnabled(this->stream_ready ? true : false);
-    }
-
-    bool enabled = status == Qt::Checked ? false : true;
-    ui->label->setEnabled(enabled);
-    ui->lineEdit->setEnabled(enabled);
-    ui->toolButton->setEnabled(enabled);
-    bool loadButtonEnabled = ui->lineEdit->text().isEmpty() ? false : enabled;
-    ui->pushButton_2->setEnabled(loadButtonEnabled);
-
-    if (status == Qt::Checked) {
         ui->label_3->show();
         ui->lineEdit_2->show();
         ui->lineEdit_2->setText("ActiChamp-0");
@@ -108,8 +99,44 @@ void XdfStreamer::on_checkBox_stateChanged(int status)
         ui->label_5->show();
         ui->lineEdit_3->show();
         ui->groupBox_2->show();
+        ui->treeWidget->hide();
+        ui->treeWidget_2->show();
+        ui->treeWidget_2->header()->show();
+        ui->treeWidget_2->setColumnWidth(0, std::round(0.5 * ui->treeWidget_2->width()));
+
+        QTreeWidgetItem *item = new QTreeWidgetItem(ui->treeWidget_2);
+        item->setText(0, "Stream-" + QString::number(1));
+
+        QTreeWidgetItem *subItem = new QTreeWidgetItem(item);
+        subItem->setText(0, "Stream Name");
+        subItem->setText(1, ui->lineEdit_2->text());
+        item->addChild(subItem);
+
+        subItem = new QTreeWidgetItem(item);
+        subItem->setText(0, "Channel Format");
+        subItem->setText(1, "Double");
+        item->addChild(subItem);
+
+        subItem = new QTreeWidgetItem(item);
+        subItem->setText(0, "Samplign Rate");
+        subItem->setText(1, QString::number(ui->spinBox->value()));
+        item->addChild(subItem);
+
+        subItem = new QTreeWidgetItem(item);
+        subItem->setText(0, "Channel Count");
+        subItem->setText(1, QString::number(ui->spinBox_2->value()));
+        item->addChild(subItem);
+
+        subItem = new QTreeWidgetItem(item);
+        subItem->setText(0, "Stream Type");
+        subItem->setText(1, ui->lineEdit_3->text());
+        item->addChild(subItem);
+
+        ui->treeWidget_2->addTopLevelItem(item);
+        ui->treeWidget_2->expandAll();
     }
     else {
+        ui->pushButton->setEnabled(this->stream_ready ? true : false);
         ui->label_3->hide();
         ui->lineEdit_2->hide();
         ui->label_4->hide();
@@ -117,7 +144,18 @@ void XdfStreamer::on_checkBox_stateChanged(int status)
         ui->label_5->hide();
         ui->lineEdit_3->hide();
         ui->groupBox_2->hide();
+        ui->treeWidget_2->clear();
+        ui->treeWidget_2->hide();
+        ui->treeWidget_2->header()->hide();
+        ui->treeWidget->show();
     }
+
+    bool enabled = status == Qt::Checked ? false : true;
+    ui->label->setEnabled(enabled);
+    ui->lineEdit->setEnabled(enabled);
+    ui->toolButton->setEnabled(enabled);
+    bool loadButtonEnabled = ui->lineEdit->text().isEmpty() ? false : enabled;
+    ui->pushButton_2->setEnabled(loadButtonEnabled);
 }
 
 void XdfStreamer::openFilePicker()
@@ -172,6 +210,11 @@ void XdfStreamer::handleXdfFile()
                 subItem->setText(1, QString::number(this->xdf->streams[k].info.channel_count));
                 item->addChild(subItem);
 
+                subItem = new QTreeWidgetItem(item);
+                subItem->setText(0, "Stream Type");
+                subItem->setText(1, QString::fromStdString(this->xdf->streams[k].info.type));
+                item->addChild(subItem);
+
                 ui->treeWidget->addTopLevelItem(item);
             }
             ui->treeWidget->expandAll();
@@ -183,9 +226,9 @@ void XdfStreamer::handleXdfFile()
     }
 }
 
-void XdfStreamer::on_lineEdit_textChanged(const QString &arg1)
+void XdfStreamer::on_lineEdit_textChanged(const QString &path)
 {
-    if (arg1.isEmpty()) {
+    if (path.isEmpty()) {
         ui->pushButton_2->setEnabled(false);
     }
     else {
