@@ -24,9 +24,19 @@ XdfStreamer::XdfStreamer(QWidget *parent) :
     ui->lineEdit_3->setText("EEG");
     ui->lineEdit_3->hide();
     ui->groupBox_2->hide();
+
+    QStringList header = {"Property", "Value"};
+    ui->treeWidget->setHeaderLabels(header);
+    ui->treeWidget->header()->hide();
+    ui->treeWidget->setColumnCount(2);
+
+    ui->treeWidget_2->setHeaderLabels(header);
+    ui->treeWidget_2->header()->hide();
+    ui->treeWidget_2->setColumnCount(2);
+    ui->treeWidget_2->hide();
+
     setWindowTitle("XDF Streamer");
 
-    QObject::connect(ui->checkBox, SIGNAL(stateChanged(int)), this, SLOT(on_checkBox_stateChanged(int)));
     QObject::connect(ui->toolButton, SIGNAL(clicked()), this, SLOT(openFilePicker()));
     QObject::connect(ui->pushButton_2, SIGNAL(clicked()), this, SLOT(handleXdfFile()));
 }
@@ -67,17 +77,81 @@ void XdfStreamer::pushRandomSamples()
     }
 }
 
+void XdfStreamer::pushXdfData()
+{
+    QString streamName = "Sample Stream";
+    const int samplingRate = ui->spinBox->value();
+    int channelCount = this->xdf->streams[0].info.channel_count;
+    lsl::stream_info info(streamName.toStdString(), "EEG", channelCount, (double)samplingRate, lsl::cf_double64, "RT_Sender_SimulationPC");
+    lsl::stream_outlet outlet(info);
+
+    const double dSamplingInterval = 1.0 / samplingRate;
+    std::vector<double> sample(channelCount);
+
+    //===============================================================================================================
+    // Get Raw Stream Index
+    //===============================================================================================================
+    int streamIdx = -1;
+
+    for (size_t k = 0; k < this->xdf->streams.size(); k++) {
+        if (this->xdf->streams[k].info.channel_format.compare("string") != 0) {
+            streamIdx = k;
+            break;
+        }
+    }
+
+    //===============================================================================================================
+    // Push samples to LSL
+    //===============================================================================================================
+    if (streamIdx == -1) {
+        qDebug() << "Didn't find the data stream.";
+    }
+    else {
+        double starttime = ((double)clock()) / CLOCKS_PER_SEC;
+
+        for (unsigned t = 0; t < xdf->streams[streamIdx].time_series.front().size(); t++) {
+            while (((double)clock()) / CLOCKS_PER_SEC < starttime + t * dSamplingInterval);
+
+            for (int c = 0; c < channelCount; c++) {
+                sample[c] = xdf->streams[streamIdx].time_series[c][t];
+            }
+
+            outlet.push_sample(sample);
+        }
+    }
+}
+
+void XdfStreamer::clearCache()
+{
+    this->xdf.clear();
+    ui->pushButton->setEnabled(false);
+    ui->pushButton_2->setText("Load");
+    ui->treeWidget->header()->hide();
+    ui->treeWidget->clear();
+    this->stream_ready = false;
+}
+
+void XdfStreamer::enableControlPanel(bool enabled)
+{
+    ui->label->setEnabled(enabled);
+    ui->label_2->setEnabled(enabled);
+    ui->label_3->setEnabled(enabled);
+    ui->label_4->setEnabled(enabled);
+    ui->label_5->setEnabled(enabled);
+    ui->lineEdit->setEnabled(enabled);
+    ui->lineEdit_2->setEnabled(enabled);
+    ui->lineEdit_3->setEnabled(enabled);
+    ui->toolButton->setEnabled(enabled);
+    ui->pushButton_2->setEnabled(enabled);
+    ui->checkBox->setEnabled(enabled);
+    ui->spinBox->setEnabled(enabled);
+    ui->spinBox_2->setEnabled(enabled);
+}
+
 void XdfStreamer::on_checkBox_stateChanged(int status)
 {
-    bool enabled = status == Qt::Checked ? false : true;
-    ui->label->setEnabled(enabled);
-    ui->lineEdit->setEnabled(enabled);
-    ui->toolButton->setEnabled(enabled);
-    ui->pushButton->setEnabled(!enabled);
-    bool loadButtonEnabled = ui->lineEdit->text().isEmpty() ? false : enabled;
-    ui->pushButton_2->setEnabled(loadButtonEnabled);
-
     if (status == Qt::Checked) {
+        ui->pushButton->setEnabled(true);
         ui->label_3->show();
         ui->lineEdit_2->show();
         ui->lineEdit_2->setText("ActiChamp-0");
@@ -86,8 +160,44 @@ void XdfStreamer::on_checkBox_stateChanged(int status)
         ui->label_5->show();
         ui->lineEdit_3->show();
         ui->groupBox_2->show();
+        ui->treeWidget->hide();
+        ui->treeWidget_2->show();
+        ui->treeWidget_2->header()->show();
+        ui->treeWidget_2->setColumnWidth(0, std::round(0.5 * ui->treeWidget_2->width()));
+
+        QTreeWidgetItem *item = new QTreeWidgetItem(ui->treeWidget_2);
+        item->setText(0, "Stream-" + QString::number(1));
+
+        QTreeWidgetItem *subItem = new QTreeWidgetItem(item);
+        subItem->setText(0, "Stream Name");
+        subItem->setText(1, ui->lineEdit_2->text());
+        item->addChild(subItem);
+
+        subItem = new QTreeWidgetItem(item);
+        subItem->setText(0, "Channel Format");
+        subItem->setText(1, "Double");
+        item->addChild(subItem);
+
+        subItem = new QTreeWidgetItem(item);
+        subItem->setText(0, "Samplign Rate");
+        subItem->setText(1, QString::number(ui->spinBox->value()));
+        item->addChild(subItem);
+
+        subItem = new QTreeWidgetItem(item);
+        subItem->setText(0, "Channel Count");
+        subItem->setText(1, QString::number(ui->spinBox_2->value()));
+        item->addChild(subItem);
+
+        subItem = new QTreeWidgetItem(item);
+        subItem->setText(0, "Stream Type");
+        subItem->setText(1, ui->lineEdit_3->text());
+        item->addChild(subItem);
+
+        ui->treeWidget_2->addTopLevelItem(item);
+        ui->treeWidget_2->expandAll();
     }
     else {
+        ui->pushButton->setEnabled(this->stream_ready ? true : false);
         ui->label_3->hide();
         ui->lineEdit_2->hide();
         ui->label_4->hide();
@@ -95,7 +205,18 @@ void XdfStreamer::on_checkBox_stateChanged(int status)
         ui->label_5->hide();
         ui->lineEdit_3->hide();
         ui->groupBox_2->hide();
+        ui->treeWidget_2->clear();
+        ui->treeWidget_2->hide();
+        ui->treeWidget_2->header()->hide();
+        ui->treeWidget->show();
     }
+
+    bool enabled = status == Qt::Checked ? false : true;
+    ui->label->setEnabled(enabled);
+    ui->lineEdit->setEnabled(enabled);
+    ui->toolButton->setEnabled(enabled);
+    bool loadButtonEnabled = ui->lineEdit->text().isEmpty() ? false : enabled;
+    ui->pushButton_2->setEnabled(loadButtonEnabled);
 }
 
 void XdfStreamer::openFilePicker()
@@ -103,7 +224,9 @@ void XdfStreamer::openFilePicker()
     QString fileName = QFileDialog::getOpenFileName(this, tr("Open XDF File"), "", tr("XDF Files (*.xdf)"));
 
     if (!fileName.isEmpty()) {
+        this->clearCache();
         ui->lineEdit->setText(fileName);
+        handleXdfFile();
     }
 }
 
@@ -120,18 +243,53 @@ void XdfStreamer::handleXdfFile()
         else {
             ui->pushButton->setEnabled(true);
             ui->pushButton_2->setText("Unload");
+            ui->treeWidget->header()->show();
+            ui->treeWidget->setColumnWidth(0, std::round(0.5 * ui->treeWidget->width()));
+
+            for (size_t k = 0; k < this->xdf->streams.size(); k++) {
+                QTreeWidgetItem *item = new QTreeWidgetItem(ui->treeWidget);
+                item->setText(0, "Stream-" + QString::number(k+1));
+                item->setCheckState(0, k == 0 ? Qt::Checked : Qt::Unchecked);
+
+                QTreeWidgetItem *subItem = new QTreeWidgetItem(item);
+                subItem->setText(0, "Stream Name");
+                subItem->setText(1, QString::fromStdString(this->xdf->streams[k].info.name));
+                item->addChild(subItem);
+
+                subItem = new QTreeWidgetItem(item);
+                subItem->setText(0, "Channel Format");
+                subItem->setText(1, QString::fromStdString(this->xdf->streams[k].info.channel_format));
+                item->addChild(subItem);
+
+                subItem = new QTreeWidgetItem(item);
+                subItem->setText(0, "Samplign Rate");
+                subItem->setText(1, QString::number(this->xdf->streams[k].info.nominal_srate));
+                item->addChild(subItem);
+
+                subItem = new QTreeWidgetItem(item);
+                subItem->setText(0, "Channel Count");
+                subItem->setText(1, QString::number(this->xdf->streams[k].info.channel_count));
+                item->addChild(subItem);
+
+                subItem = new QTreeWidgetItem(item);
+                subItem->setText(0, "Stream Type");
+                subItem->setText(1, QString::fromStdString(this->xdf->streams[k].info.type));
+                item->addChild(subItem);
+
+                ui->treeWidget->addTopLevelItem(item);
+            }
+            ui->treeWidget->expandAll();
+            this->stream_ready = true;
         }
     }
     else {
-        this->xdf.clear();
-        ui->pushButton->setEnabled(false);
-        ui->pushButton_2->setText("Load");
+        this->clearCache();
     }
 }
 
-void XdfStreamer::on_lineEdit_textChanged(const QString &arg1)
+void XdfStreamer::on_lineEdit_textChanged(const QString &path)
 {
-    if (arg1.isEmpty()) {
+    if (path.isEmpty()) {
         ui->pushButton_2->setEnabled(false);
     }
     else {
@@ -143,6 +301,7 @@ void XdfStreamer::on_pushButton_clicked()
 {
     if (ui->pushButton->text().compare("Stream") == 0) {
         ui->pushButton->setText("Stop");
+        this->enableControlPanel(false);
 
         if (ui->checkBox->isChecked()) {
             qDebug() << "Generating synthetic signals";
@@ -152,48 +311,7 @@ void XdfStreamer::on_pushButton_clicked()
         else {
             qDebug() << "Load XDF";
 
-//            QString streamName = ui->lineEdit_2->text();
-//            const int samplingRate = ui->spinBox->value();
-//            const int channelCount = 32;
-//            lsl::stream_info info(streamName.toStdString(), "EEG", channelCount, (double)samplingRate, lsl::cf_double64, "RT_Sender_SimulationPC");
-//            lsl::stream_outlet outlet(info);
-
-//            const double dSamplingInterval = 1.0 / samplingRate;
-//            double sample[channelCount];
-
-//            //===============================================================================================================
-//            // Get Raw Stream Index
-//            //===============================================================================================================
-//            int streamIdx = -1;
-
-//            for (size_t k = 0; k < this->xdf->streams.size(); k++) {
-//                if (this->xdf->streams[k].info.name.compare("ActiChamp-0") == 0) {
-//                    streamIdx = k;
-//                    break;
-//                }
-//            }
-
-//            //===============================================================================================================
-//            // Push samples to LSL
-//            //===============================================================================================================
-//            if (streamIdx == -1) {
-//                qDebug() << "Didn't find the data stream.";
-//            }
-//            else {
-//                QMessageBox::information(this, tr("Click to start streaming"), tr("Loading XDF file successful"), QMessageBox::Ok);
-
-//                double starttime = ((double)clock()) / CLOCKS_PER_SEC;
-
-//                for (unsigned t = 0; t < xdf->streams[streamIdx].time_series.front().size(); t++) {
-//                    while (((double)clock()) / CLOCKS_PER_SEC < starttime + t * dSamplingInterval);
-
-//                    for (int c = 0; c < channelCount; c++) {
-//                        sample[c] = xdf->streams[streamIdx].time_series[c][t];
-//                    }
-
-//                    outlet.push_sample(sample);
-//                }
-//            }
+            this->pushThread = new std::thread(&XdfStreamer::pushXdfData, this);
         }
     }
     else {
@@ -205,5 +323,6 @@ void XdfStreamer::on_pushButton_clicked()
         this->pushThread->join();
         delete this->pushThread;
         this->pushThread = nullptr;
+        this->enableControlPanel(true);
     }
 }

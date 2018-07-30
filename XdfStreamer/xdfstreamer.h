@@ -24,8 +24,12 @@ private:
     std::thread *pushThread = nullptr;
     bool stop_thread = false;
     std::mutex mutex_stop_thread;
+    bool stream_ready = false;
 
     void pushRandomSamples();
+    void pushXdfData();
+    void clearCache();
+    void enableControlPanel(bool enabled);
 
 private slots:
     void on_checkBox_stateChanged(int status);
