@@ -28,6 +28,7 @@ private:
 
     void pushRandomSamples();
     void clearCache();
+    void enableControlPanel(bool enabled);
 
 private slots:
     void on_checkBox_stateChanged(int status);

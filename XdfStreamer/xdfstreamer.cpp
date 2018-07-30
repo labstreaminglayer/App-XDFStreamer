@@ -87,6 +87,23 @@ void XdfStreamer::clearCache()
     this->stream_ready = false;
 }
 
+void XdfStreamer::enableControlPanel(bool enabled)
+{
+    ui->label->setEnabled(enabled);
+    ui->label_2->setEnabled(enabled);
+    ui->label_3->setEnabled(enabled);
+    ui->label_4->setEnabled(enabled);
+    ui->label_5->setEnabled(enabled);
+    ui->lineEdit->setEnabled(enabled);
+    ui->lineEdit_2->setEnabled(enabled);
+    ui->lineEdit_3->setEnabled(enabled);
+    ui->toolButton->setEnabled(enabled);
+    ui->pushButton_2->setEnabled(enabled);
+    ui->checkBox->setEnabled(enabled);
+    ui->spinBox->setEnabled(enabled);
+    ui->spinBox_2->setEnabled(enabled);
+}
+
 void XdfStreamer::on_checkBox_stateChanged(int status)
 {
     if (status == Qt::Checked) {
@@ -240,9 +257,11 @@ void XdfStreamer::on_pushButton_clicked()
 {
     if (ui->pushButton->text().compare("Stream") == 0) {
         ui->pushButton->setText("Stop");
+        this->enableControlPanel(false);
 
         if (ui->checkBox->isChecked()) {
             qDebug() << "Generating synthetic signals";
+
 
             this->pushThread = new std::thread(&XdfStreamer::pushRandomSamples, this);
         }
@@ -302,5 +321,6 @@ void XdfStreamer::on_pushButton_clicked()
         this->pushThread->join();
         delete this->pushThread;
         this->pushThread = nullptr;
+        this->enableControlPanel(true);
     }
 }
