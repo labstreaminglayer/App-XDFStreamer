@@ -27,6 +27,7 @@ private:
     bool stream_ready = false;
 
     void pushRandomSamples();
+    void pushXdfData();
     void clearCache();
     void enableControlPanel(bool enabled);
 

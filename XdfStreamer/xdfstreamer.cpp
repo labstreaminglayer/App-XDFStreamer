@@ -77,6 +77,50 @@ void XdfStreamer::pushRandomSamples()
     }
 }
 
+void XdfStreamer::pushXdfData()
+{
+    QString streamName = "Sample Stream";
+    const int samplingRate = ui->spinBox->value();
+    int channelCount = this->xdf->streams[0].info.channel_count;
+    lsl::stream_info info(streamName.toStdString(), "EEG", channelCount, (double)samplingRate, lsl::cf_double64, "RT_Sender_SimulationPC");
+    lsl::stream_outlet outlet(info);
+
+    const double dSamplingInterval = 1.0 / samplingRate;
+    std::vector<double> sample(channelCount);
+
+    //===============================================================================================================
+    // Get Raw Stream Index
+    //===============================================================================================================
+    int streamIdx = -1;
+
+    for (size_t k = 0; k < this->xdf->streams.size(); k++) {
+        if (this->xdf->streams[k].info.channel_format.compare("string") != 0) {
+            streamIdx = k;
+            break;
+        }
+    }
+
+    //===============================================================================================================
+    // Push samples to LSL
+    //===============================================================================================================
+    if (streamIdx == -1) {
+        qDebug() << "Didn't find the data stream.";
+    }
+    else {
+        double starttime = ((double)clock()) / CLOCKS_PER_SEC;
+
+        for (unsigned t = 0; t < xdf->streams[streamIdx].time_series.front().size(); t++) {
+            while (((double)clock()) / CLOCKS_PER_SEC < starttime + t * dSamplingInterval);
+
+            for (int c = 0; c < channelCount; c++) {
+                sample[c] = xdf->streams[streamIdx].time_series[c][t];
+            }
+
+            outlet.push_sample(sample);
+        }
+    }
+}
+
 void XdfStreamer::clearCache()
 {
     this->xdf.clear();
@@ -262,54 +306,12 @@ void XdfStreamer::on_pushButton_clicked()
         if (ui->checkBox->isChecked()) {
             qDebug() << "Generating synthetic signals";
 
-
             this->pushThread = new std::thread(&XdfStreamer::pushRandomSamples, this);
         }
         else {
             qDebug() << "Load XDF";
 
-            //            QString streamName = ui->lineEdit_2->text();
-            //            const int samplingRate = ui->spinBox->value();
-            //            const int channelCount = 32;
-            //            lsl::stream_info info(streamName.toStdString(), "EEG", channelCount, (double)samplingRate, lsl::cf_double64, "RT_Sender_SimulationPC");
-            //            lsl::stream_outlet outlet(info);
-
-            //            const double dSamplingInterval = 1.0 / samplingRate;
-            //            double sample[channelCount];
-
-            //            //===============================================================================================================
-            //            // Get Raw Stream Index
-            //            //===============================================================================================================
-            //            int streamIdx = -1;
-
-            //            for (size_t k = 0; k < this->xdf->streams.size(); k++) {
-            //                if (this->xdf->streams[k].info.name.compare("ActiChamp-0") == 0) {
-            //                    streamIdx = k;
-            //                    break;
-            //                }
-            //            }
-
-            //            //===============================================================================================================
-            //            // Push samples to LSL
-            //            //===============================================================================================================
-            //            if (streamIdx == -1) {
-            //                qDebug() << "Didn't find the data stream.";
-            //            }
-            //            else {
-            //                QMessageBox::information(this, tr("Click to start streaming"), tr("Loading XDF file successful"), QMessageBox::Ok);
-
-            //                double starttime = ((double)clock()) / CLOCKS_PER_SEC;
-
-            //                for (unsigned t = 0; t < xdf->streams[streamIdx].time_series.front().size(); t++) {
-            //                    while (((double)clock()) / CLOCKS_PER_SEC < starttime + t * dSamplingInterval);
-
-            //                    for (int c = 0; c < channelCount; c++) {
-            //                        sample[c] = xdf->streams[streamIdx].time_series[c][t];
-            //                    }
-
-            //                    outlet.push_sample(sample);
-            //                }
-            //            }
+            this->pushThread = new std::thread(&XdfStreamer::pushXdfData, this);
         }
     }
     else {
