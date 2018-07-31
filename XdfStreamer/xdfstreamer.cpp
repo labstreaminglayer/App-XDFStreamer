@@ -16,6 +16,7 @@ XdfStreamer::XdfStreamer(QWidget *parent) :
     ui->pushButton->setEnabled(false);
     ui->pushButton_2->setEnabled(false);
     ui->spinBox_2->setValue(32);
+    ui->formatComboBox->setCurrentIndex((int)(lsl::cf_double64-1));
     ui->label_3->hide();
     ui->lineEdit_2->hide();
     ui->label_4->hide();
@@ -49,7 +50,10 @@ void XdfStreamer::pushRandomSamples()
     const int samplingRate = ui->spinBox->value();
     int channelCount = ui->spinBox_2->value();
     std::string streamType = ui->lineEdit_3->text().toStdString();
-    lsl::stream_info info(streamName.toStdString(), streamType, channelCount, (double)samplingRate, lsl::cf_double64, "RT_Sender_SimulationPC");
+
+    lsl::channel_format_t channelFormat = (lsl::channel_format_t)(ui->formatComboBox->currentIndex() + 1);
+
+    lsl::stream_info info(streamName.toStdString(), streamType, channelCount, (double)samplingRate, channelFormat, "RT_Sender_SimulationPC");
     lsl::stream_outlet outlet(info);
 
     const double dSamplingInterval = 1.0 / samplingRate;
