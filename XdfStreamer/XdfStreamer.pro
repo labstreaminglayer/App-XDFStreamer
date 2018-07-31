@@ -45,3 +45,5 @@ else:unix: LIBS += -L$$PWD/extern/bin/ -lliblsl32
 
 INCLUDEPATH += $$PWD/extern/include
 DEPENDPATH += $$PWD/extern/include
+
+RC_ICONS = xdfstreamer.ico
