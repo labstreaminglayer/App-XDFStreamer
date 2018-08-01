@@ -41,6 +41,8 @@ FORMS += \
 
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/extern/bin/ -lliblsl32
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/extern/bin/ -lliblsl32-debug
+else:win64:CONFIG(release, debug|release): LIBS += -L$$PWD/extern/bin/ -lliblsl64
+else:win64:CONFIG(debug, debug|release): LIBS += -L$$PWD/extern/bin/ -lliblsl64-debug
 else:unix: LIBS += -L$$PWD/extern/bin/ -lliblsl32
 
 INCLUDEPATH += $$PWD/extern/include
