@@ -1,6 +1,5 @@
 #include "xdfstreamer.h"
 #include "ui_xdfstreamer.h"
-#include "lsl_cpp.h"
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QDebug>
@@ -44,16 +43,8 @@ XdfStreamer::~XdfStreamer()
     delete ui;
 }
 
-void XdfStreamer::pushRandomData()
+void XdfStreamer::pushRandomData(QSharedPointer<lsl::stream_outlet> outlet_ptr, const int samplingRate, const int channelCount)
 {
-    QString streamName = ui->lineEdit_2->text();
-    const int samplingRate = ui->spinBox->value();
-    const int channelCount = ui->spinBox_2->value();
-    std::string streamType = ui->lineEdit_3->text().toStdString();
-    lsl::channel_format_t channelFormat = (lsl::channel_format_t)(ui->formatComboBox->currentIndex() + 1);
-    lsl::stream_info info(streamName.toStdString(), streamType, channelCount, (double)samplingRate, channelFormat, "RT_Sender_SimulationPC");
-    lsl::stream_outlet outlet(info);
-
     const double dSamplingInterval = 1.0 / samplingRate;
     std::vector<double> sample(channelCount);
 
@@ -63,6 +54,7 @@ void XdfStreamer::pushRandomData()
         {
             std::lock_guard<std::mutex> guard(this->mutex_stop_thread);
             if (this->stop_thread) {
+                outlet_ptr.clear();
                 return;
             }
         }
@@ -73,46 +65,12 @@ void XdfStreamer::pushRandomData()
             sample[c] = (rand() % 1500) / 500.0 - 1.5;
         }
 
-        outlet.push_sample(sample);
+        outlet_ptr->push_sample(sample);
     }
 }
 
-void XdfStreamer::pushXdfData()
+void XdfStreamer::pushXdfData(QSharedPointer<lsl::stream_outlet> outlet_ptr, const int samplingRate, const int channelCount)
 {
-    std::string streamName = this->xdf->streams[this->stream_idx].info.name;
-    const int samplingRate = ui->spinBox->value();
-    const int channelCount = this->xdf->streams[this->stream_idx].info.channel_count;
-    std::string streamType = ui->lineEdit_3->text().toStdString();
-
-    lsl::channel_format_t channelFormat;
-    if (this->xdf->streams[this->stream_idx].info.channel_format.compare("float32") == 0) {
-        channelFormat = lsl::cf_float32;
-    }
-    else if (this->xdf->streams[this->stream_idx].info.channel_format.compare("double64") == 0) {
-        channelFormat = lsl::cf_double64;
-    }
-    else if (this->xdf->streams[this->stream_idx].info.channel_format.compare("int8") == 0) {
-        channelFormat = lsl::cf_int8;
-    }
-    else if (this->xdf->streams[this->stream_idx].info.channel_format.compare("int16") == 0) {
-        channelFormat = lsl::cf_int16;
-    }
-    else if (this->xdf->streams[this->stream_idx].info.channel_format.compare("int32") == 0) {
-        channelFormat = lsl::cf_int32;
-    }
-    else if (this->xdf->streams[this->stream_idx].info.channel_format.compare("int64") == 0) {
-        channelFormat = lsl::cf_int64;
-    }
-    else if (this->xdf->streams[this->stream_idx].info.channel_format.compare("string") == 0) {
-        channelFormat = lsl::cf_string;
-    }
-    else {
-        channelFormat = lsl::cf_undefined;
-    }
-
-    lsl::stream_info info(streamName, streamType, channelCount, (double)samplingRate, channelFormat, "RT_Sender_SimulationPC");
-    lsl::stream_outlet outlet(info);
-
     const double dSamplingInterval = 1.0 / samplingRate;
     std::vector<double> sample(channelCount);
 
@@ -132,9 +90,10 @@ void XdfStreamer::pushXdfData()
             sample[c] = this->xdf->streams[this->stream_idx].time_series[c][t];
         }
 
-        outlet.push_sample(sample);
+        outlet_ptr->push_sample(sample);
     }
 
+    outlet_ptr.clear();
     emit this->ui->pushButton->clicked();
 }
 
@@ -168,6 +127,52 @@ void XdfStreamer::enableControlPanel(bool enabled)
     ui->spinBox->setEnabled(enabled);
     ui->spinBox_2->setEnabled(enabled);
     ui->formatComboBox->setEnabled(enabled);
+}
+
+lsl::stream_info XdfStreamer::initializeLslStreamsForRandomData(const int samplingRate, const int channelCount)
+{
+    QString streamName = ui->lineEdit_2->text();
+    std::string streamType = ui->lineEdit_3->text().toStdString();
+    lsl::channel_format_t channelFormat = (lsl::channel_format_t)(ui->formatComboBox->currentIndex() + 1);
+    lsl::stream_info info(streamName.toStdString(), streamType, channelCount, (double)samplingRate, channelFormat, "RT_Sender_SimulationPC");
+
+    return info;
+}
+
+lsl::stream_info XdfStreamer::initializeLslStreamsForXdfData(const int samplingRate, const int channelCount)
+{
+    std::string streamName = this->xdf->streams[this->stream_idx].info.name;
+    std::string streamType = ui->lineEdit_3->text().toStdString();
+
+    lsl::channel_format_t channelFormat;
+    if (this->xdf->streams[this->stream_idx].info.channel_format.compare("float32") == 0) {
+        channelFormat = lsl::cf_float32;
+    }
+    else if (this->xdf->streams[this->stream_idx].info.channel_format.compare("double64") == 0) {
+        channelFormat = lsl::cf_double64;
+    }
+    else if (this->xdf->streams[this->stream_idx].info.channel_format.compare("int8") == 0) {
+        channelFormat = lsl::cf_int8;
+    }
+    else if (this->xdf->streams[this->stream_idx].info.channel_format.compare("int16") == 0) {
+        channelFormat = lsl::cf_int16;
+    }
+    else if (this->xdf->streams[this->stream_idx].info.channel_format.compare("int32") == 0) {
+        channelFormat = lsl::cf_int32;
+    }
+    else if (this->xdf->streams[this->stream_idx].info.channel_format.compare("int64") == 0) {
+        channelFormat = lsl::cf_int64;
+    }
+    else if (this->xdf->streams[this->stream_idx].info.channel_format.compare("string") == 0) {
+        channelFormat = lsl::cf_string;
+    }
+    else {
+        channelFormat = lsl::cf_undefined;
+    }
+
+    lsl::stream_info info(streamName, streamType, channelCount, (double)samplingRate, channelFormat, "RT_Sender_SimulationPC");
+
+    return info;
 }
 
 void XdfStreamer::on_checkBox_stateChanged(int status)
@@ -344,12 +349,22 @@ void XdfStreamer::on_pushButton_clicked()
         if (ui->checkBox->isChecked()) {
             qDebug() << "Generating synthetic signals";
 
-            this->pushThread = new std::thread(&XdfStreamer::pushRandomData, this);
+            const int samplingRate = ui->spinBox->value();
+            const int channelCount = ui->spinBox_2->value();
+            lsl::stream_info info = this->initializeLslStreamsForRandomData(samplingRate, channelCount);
+            QSharedPointer<lsl::stream_outlet> outlet_ptr = QSharedPointer<lsl::stream_outlet>(new lsl::stream_outlet(info));
+
+            this->pushThread = new std::thread(&XdfStreamer::pushRandomData, this, outlet_ptr, samplingRate, channelCount);
         }
         else {
             qDebug() << "Load XDF";
 
-            this->pushThread = new std::thread(&XdfStreamer::pushXdfData, this);
+            const int samplingRate = ui->spinBox->value();
+            const int channelCount = this->xdf->streams[this->stream_idx].info.channel_count;
+            lsl::stream_info info = this->initializeLslStreamsForXdfData(samplingRate, channelCount);
+            QSharedPointer<lsl::stream_outlet> outlet_ptr = QSharedPointer<lsl::stream_outlet>(new lsl::stream_outlet(info));
+
+            this->pushThread = new std::thread(&XdfStreamer::pushXdfData, this, outlet_ptr, samplingRate, channelCount);
         }
         ui->treeWidget->setEnabled(false);
         ui->treeWidget_2->setEnabled(false);

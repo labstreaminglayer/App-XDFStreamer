@@ -2,6 +2,7 @@
 #define XDFSTREAMER_H
 
 #include "libxdf/xdf.h"
+#include "lsl_cpp.h"
 #include <QMainWindow>
 #include <QTreeWidget>
 #include <thread>
@@ -22,16 +23,18 @@ public:
 private:
     Ui::XdfStreamer *ui;
     QSharedPointer<Xdf> xdf;
-    std::thread *pushThread = nullptr;
+    std::thread *pushThread = Q_NULLPTR;
     bool stop_thread = false;
     std::mutex mutex_stop_thread;
     bool stream_ready = false;
-    size_t stream_idx = -1;
+    int stream_idx = -1;
 
-    void pushRandomData();
-    void pushXdfData();
+    void pushRandomData(QSharedPointer<lsl::stream_outlet> outlet_ptr, const int samplingRate, const int channelCount);
+    void pushXdfData(QSharedPointer<lsl::stream_outlet> outlet_ptr, const int samplingRate, const int channelCount);
     void clearCache();
     void enableControlPanel(bool enabled);
+    lsl::stream_info initializeLslStreamsForRandomData(const int samplingRate, const int channelCount);
+    lsl::stream_info initializeLslStreamsForXdfData(const int samplingRate, const int channelCount);
 
 private slots:
     void on_checkBox_stateChanged(int status);
