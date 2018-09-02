@@ -354,10 +354,19 @@ void XdfStreamer::on_pushButton_clicked()
             lsl::stream_info info = this->initializeLslStreamsForRandomData(samplingRate, channelCount);
             QSharedPointer<lsl::stream_outlet> outlet_ptr = QSharedPointer<lsl::stream_outlet>(new lsl::stream_outlet(info));
 
+            QMessageBox::information(this, tr("Status"), tr("Lab Streaming Layer stream initialized.\n"
+                                                      "Please start LabRecorder and refresh the streams\n"
+                                                      "and/or RT_Receiver_GUI to run simulations."),
+                                     QMessageBox::Ok, QMessageBox::Ok);
+
             this->pushThread = new std::thread(&XdfStreamer::pushRandomData, this, outlet_ptr, samplingRate, channelCount);
         }
         else {
             qDebug() << "Load XDF";
+            QMessageBox::information(this, tr("Status"), tr("Lab Streaming Layer stream initialized.\n"
+                                                            "Please start LabRecorder and refresh the streams\n"
+                                                            "and/or RT_Receiver_GUI to run simulations."),
+                                     QMessageBox::Ok, QMessageBox::Ok);
 
             const int samplingRate = ui->spinBox->value();
             const int channelCount = this->xdf->streams[this->stream_idx].info.channel_count;
