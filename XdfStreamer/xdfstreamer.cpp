@@ -62,10 +62,13 @@ void XdfStreamer::pushRandomData(QSharedPointer<lsl::stream_outlet> outlet_ptr, 
         while (((double)clock()) / CLOCKS_PER_SEC < starttime + t * dSamplingInterval);
 
         for (int c = 0; c < channelCount; c++) {
+            /* Generate a sine wave
             if (c != 20) {
                 sample[c] = 2 * sin(2 * 3.1415926 * 10 * (t * 1.0 / 10000) - 0.2) + 0.5;
             }
-//            sample[c] = (rand() % 1500) / 500.0 - 1.5;
+            */
+
+            sample[c] = (rand() % 1500) / 500.0 - 1.5;
         }
 
         outlet_ptr->push_sample(sample);
