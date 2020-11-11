@@ -1,4 +1,8 @@
 build-XdfStreamer*/
-XdfStreamer/XdfStreamer.pro.user
-XdfStreamer/XdfStreamer.pro.user.0340fd4
-XdfStreamer/XdfStreamer.pro.user.4.8-pre1
+XdfStreamer/XdfStreamer.pro.user*
+/cmake-build-debug
+/.idea
+/build
+/.vs
+CMakeSettings.json
+/out

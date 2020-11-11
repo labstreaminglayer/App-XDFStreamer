@@ -1,7 +1,7 @@
 #ifndef XDFSTREAMER_H
 #define XDFSTREAMER_H
 
-#include "libxdf/xdf.h"
+#include "xdf.h"
 #include "lsl_cpp.h"
 #include <QMainWindow>
 #include <QTreeWidget>

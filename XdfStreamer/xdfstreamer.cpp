@@ -4,6 +4,8 @@
 #include <QMessageBox>
 #include <QDebug>
 #include <ctime>
+#include <math.h>
+
 
 XdfStreamer::XdfStreamer(QWidget *parent) :
     QMainWindow(parent),
