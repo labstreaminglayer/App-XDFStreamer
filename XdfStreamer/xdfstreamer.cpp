@@ -293,7 +293,7 @@ void XdfStreamer::on_pushButton_2_clicked()
             for (size_t k = 0; k < this->xdf->streams.size(); k++) {
                 QTreeWidgetItem *item = new QTreeWidgetItem(ui->treeWidget);
                 item->setText(0, "Stream-" + QString::number(k+1));
-                item->setCheckState(0, (int)k == this->stream_idx ? Qt::Checked : Qt::Unchecked);
+                item->setCheckState(0, k == this->stream_idx ? Qt::Checked : Qt::Unchecked);
                 item->setDisabled(this->xdf->streams[k].info.channel_format.compare("string") == 0 ? true : false);
 
                 QTreeWidgetItem *subItem = new QTreeWidgetItem(item);
@@ -407,13 +407,13 @@ void XdfStreamer::on_treeWidget_itemClicked(QTreeWidgetItem *item)
     QTreeWidgetItemIterator it(ui->treeWidget);
 
     if (item->checkState(0) == Qt::Checked) {
-        for (int k = 0; k < ui->treeWidget->topLevelItemCount(); k++) {
-            if (ui->treeWidget->topLevelItem(k) == item) {
+        for (size_t k = 0; k < ui->treeWidget->topLevelItemCount(); k++) {
+            if (ui->treeWidget->topLevelItem((int)k) == item) {
                 this->stream_idx = k;
                 ui->spinBox->setValue(std::round(this->xdf->streams[k].info.nominal_srate));
             }
             else {
-                ui->treeWidget->topLevelItem(k)->setCheckState(0, Qt::Unchecked);
+                ui->treeWidget->topLevelItem((int)k)->setCheckState(0, Qt::Unchecked);
             }
         }
     }

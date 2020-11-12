@@ -27,7 +27,7 @@ private:
     bool stop_thread = false;
     std::mutex mutex_stop_thread;
     bool stream_ready = false;
-    int stream_idx = -1;
+    size_t stream_idx = -1;
 
     void pushRandomData(QSharedPointer<lsl::stream_outlet> outlet_ptr, const int samplingRate, const int channelCount);
     void pushXdfData(QSharedPointer<lsl::stream_outlet> outlet_ptr, const int samplingRate, const int channelCount);
