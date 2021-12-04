@@ -150,7 +150,7 @@ lsl::stream_info XdfStreamer::initializeLslStreamsForRandomData(const int sampli
 lsl::stream_info XdfStreamer::initializeLslStreamsForXdfData(const int samplingRate, const int channelCount)
 {
     std::string streamName = this->xdf->streams[this->stream_idx].info.name;
-    std::string streamType = ui->lineEdit_3->text().toStdString();
+    std::string streamType = this->xdf->streams[this->stream_idx].info.type;
 
     lsl::channel_format_t channelFormat;
     if (this->xdf->streams[this->stream_idx].info.channel_format.compare("float32") == 0) {
@@ -179,6 +179,21 @@ lsl::stream_info XdfStreamer::initializeLslStreamsForXdfData(const int samplingR
     }
 
     lsl::stream_info info(streamName, streamType, channelCount, (double)samplingRate, channelFormat, "RT_Sender_SimulationPC");
+
+    // Reading channel names from the xdf file and setting for the stream!
+    std::vector<std::map<std::string, std::string> > channels = this->xdf->streams[this->stream_idx].info.channels;
+
+    lsl::xml_element chns = info.desc().append_child("channels");
+    for(const std::map<std::string, std::string> &item : channels) {
+
+        std::vector<std::pair<std::string, std::string>> ch_info;
+        for(auto &[key, val] : item) {
+            ch_info.push_back(std::make_pair(key, val));
+        }
+        chns.append_child("channel")
+            .append_child_value(ch_info[0].first, ch_info[0].second)
+            .append_child_value(ch_info[1].first, ch_info[1].second);
+    }
 
     return info;
 }
