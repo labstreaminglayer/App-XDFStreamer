@@ -24,7 +24,7 @@ jobs:
     strategy:
       matrix:
         os:
-        - ubuntu-latest
+        - ubuntu-20.04
         - windows-latest
         - macOS-latest
       fail-fast: false
@@ -36,7 +36,7 @@ jobs:
       run: cmake --version
 
     - name: Install liblsl, libxdf, and Qt (Ubuntu)
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.os == 'ubuntu-20.04'
       run: |
            echo ${{ github.ref }}
            curl -L ${XDF_URL}/${XDF_RELEASE_PREFIX}${XDF_RELEASE}${XDF_RELEASE_SUFFIX}/libxdf-${XDF_RELEASE}-Linux.deb -o libxdf.deb
@@ -94,7 +94,7 @@ jobs:
 
   release:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
     
     - name: Download Packages
