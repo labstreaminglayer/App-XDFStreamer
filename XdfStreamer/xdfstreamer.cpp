@@ -5,6 +5,7 @@
 #include <QDebug>
 #include <ctime>
 #include <math.h>
+#include <iostream>
 
 
 XdfStreamer::XdfStreamer(QWidget *parent) :
@@ -14,8 +15,8 @@ XdfStreamer::XdfStreamer(QWidget *parent) :
     ui->setupUi(this);
     ui->spinBox->setMaximum(100000);
     ui->spinBox->setValue(10000);
-    ui->pushButton->setEnabled(false);
-    ui->pushButton_2->setEnabled(false);
+    ui->pushButtonStream->setEnabled(false);
+    ui->pushButtonLoad->setEnabled(false);
     ui->spinBox_2->setValue(32);
     ui->formatComboBox->setCurrentIndex((int)(lsl::cf_double64-1));
     ui->label_3->hide();
@@ -28,14 +29,14 @@ XdfStreamer::XdfStreamer(QWidget *parent) :
     ui->groupBox_2->hide();
 
     QStringList header = {"Property", "Value"};
-    ui->treeWidget->setHeaderLabels(header);
-    ui->treeWidget->header()->hide();
-    ui->treeWidget->setColumnCount(2);
+    ui->treeWidgetXDF->setHeaderLabels(header);
+    ui->treeWidgetXDF->header()->hide();
+    ui->treeWidgetXDF->setColumnCount(2);
 
-    ui->treeWidget_2->setHeaderLabels(header);
-    ui->treeWidget_2->header()->hide();
-    ui->treeWidget_2->setColumnCount(2);
-    ui->treeWidget_2->hide();
+    ui->treeWidgetRandomSignal->setHeaderLabels(header);
+    ui->treeWidgetRandomSignal->header()->hide();
+    ui->treeWidgetRandomSignal->setColumnCount(2);
+    ui->treeWidgetRandomSignal->hide();
 
     setWindowTitle("XDF Streamer");
 }
@@ -77,14 +78,14 @@ void XdfStreamer::pushRandomData(QSharedPointer<lsl::stream_outlet> outlet_ptr, 
     }
 }
 
-void XdfStreamer::pushXdfData(QSharedPointer<lsl::stream_outlet> outlet_ptr, const int samplingRate, const int channelCount)
+void XdfStreamer::pushXdfData(const int stream_id, QSharedPointer<lsl::stream_outlet> outlet_ptr, const int samplingRate, const int channelCount)
 {
     const double dSamplingInterval = 1.0 / samplingRate;
     std::vector<double> sample(channelCount);
 
     double starttime = ((double)clock()) / CLOCKS_PER_SEC;
 
-    for (unsigned t = 0; t < xdf->streams[this->stream_idx].time_series.front().size(); t++) {
+    for (unsigned t = 0; t < xdf->streams[stream_id].time_series.front().size(); t++) {
         {
             std::lock_guard<std::mutex> guard(this->mutex_stop_thread);
             if (this->stop_thread) {
@@ -95,33 +96,33 @@ void XdfStreamer::pushXdfData(QSharedPointer<lsl::stream_outlet> outlet_ptr, con
         while (((double)clock()) / CLOCKS_PER_SEC < starttime + t * dSamplingInterval);
 
         for (int c = 0; c < channelCount; c++) {
-            sample[c] = this->xdf->streams[this->stream_idx].time_series[c][t];
+            sample[c] = this->xdf->streams[stream_id].time_series[c][t];
         }
 
         outlet_ptr->push_sample(sample);
     }
 
     outlet_ptr.clear();
-    emit this->ui->pushButton->clicked();
+    emit this->ui->pushButtonStream->clicked();
 }
 
 void XdfStreamer::clearCache()
 {
     this->xdf.clear();
-    ui->pushButton->setEnabled(false);
-    ui->pushButton_2->setText("Load");
-    ui->treeWidget->header()->hide();
-    ui->treeWidget->clear();
+    ui->pushButtonStream->setEnabled(false);
+    ui->pushButtonLoad->setText("Load");
+    ui->treeWidgetXDF->header()->hide();
+    ui->treeWidgetXDF->clear();
     this->stream_ready = false;
 }
 
 void XdfStreamer::enableControlPanel(bool enabled)
 {
-    if (ui->checkBox->checkState() == Qt::Unchecked) {
+    if (ui->checkBoxRandomSignal->checkState() == Qt::Unchecked) {
         ui->label->setEnabled(enabled);
         ui->lineEdit->setEnabled(enabled);
-        ui->toolButton->setEnabled(enabled);
-        ui->pushButton_2->setEnabled(enabled);
+        ui->toolButtonBrowse->setEnabled(enabled);
+        ui->pushButtonLoad->setEnabled(enabled);
     }
 
     ui->label_2->setEnabled(enabled);
@@ -131,7 +132,7 @@ void XdfStreamer::enableControlPanel(bool enabled)
     ui->label_6->setEnabled(enabled);
     ui->lineEdit_2->setEnabled(enabled);
     ui->lineEdit_3->setEnabled(enabled);
-    ui->checkBox->setEnabled(enabled);
+    ui->checkBoxRandomSignal->setEnabled(enabled);
     ui->spinBox->setEnabled(enabled);
     ui->spinBox_2->setEnabled(enabled);
     ui->formatComboBox->setEnabled(enabled);
@@ -147,61 +148,57 @@ lsl::stream_info XdfStreamer::initializeLslStreamsForRandomData(const int sampli
     return info;
 }
 
-lsl::stream_info XdfStreamer::initializeLslStreamsForXdfData(const int samplingRate, const int channelCount)
+lsl::stream_info XdfStreamer::initializeLslStreamsForXdfData(const int stream_id, const int samplingRate, const int channelCount)
 {
-    std::string streamName = this->xdf->streams[this->stream_idx].info.name;
-    std::string streamType = this->xdf->streams[this->stream_idx].info.type;
+    std::string streamName = this->xdf->streams[stream_id].info.name;
+    std::string streamType = this->xdf->streams[stream_id].info.type;
 
     lsl::channel_format_t channelFormat;
-    if (this->xdf->streams[this->stream_idx].info.channel_format.compare("float32") == 0) {
+    if (this->xdf->streams[stream_id].info.channel_format.compare("float32") == 0) {
         channelFormat = lsl::cf_float32;
     }
-    else if (this->xdf->streams[this->stream_idx].info.channel_format.compare("double64") == 0) {
+    else if (this->xdf->streams[stream_id].info.channel_format.compare("double64") == 0) {
         channelFormat = lsl::cf_double64;
     }
-    else if (this->xdf->streams[this->stream_idx].info.channel_format.compare("int8") == 0) {
+    else if (this->xdf->streams[stream_id].info.channel_format.compare("int8") == 0) {
         channelFormat = lsl::cf_int8;
     }
-    else if (this->xdf->streams[this->stream_idx].info.channel_format.compare("int16") == 0) {
+    else if (this->xdf->streams[stream_id].info.channel_format.compare("int16") == 0) {
         channelFormat = lsl::cf_int16;
     }
-    else if (this->xdf->streams[this->stream_idx].info.channel_format.compare("int32") == 0) {
+    else if (this->xdf->streams[stream_id].info.channel_format.compare("int32") == 0) {
         channelFormat = lsl::cf_int32;
     }
-    else if (this->xdf->streams[this->stream_idx].info.channel_format.compare("int64") == 0) {
+    else if (this->xdf->streams[stream_id].info.channel_format.compare("int64") == 0) {
         channelFormat = lsl::cf_int64;
     }
-    else if (this->xdf->streams[this->stream_idx].info.channel_format.compare("string") == 0) {
+    else if (this->xdf->streams[stream_id].info.channel_format.compare("string") == 0) {
         channelFormat = lsl::cf_string;
     }
     else {
         channelFormat = lsl::cf_undefined;
     }
 
-    lsl::stream_info info(streamName, streamType, channelCount, (double)samplingRate, channelFormat, "RT_Sender_SimulationPC");
+    lsl::stream_info info(streamName, streamType, channelCount, (double)samplingRate, channelFormat, "RT_Sender_SimulationPC_" + streamName);
 
     // Reading channel names from the xdf file and setting for the stream!
-    std::vector<std::map<std::string, std::string> > channels = this->xdf->streams[this->stream_idx].info.channels;
+    std::vector<std::map<std::string, std::string> > channels = this->xdf->streams[stream_id].info.channels;
 
     lsl::xml_element chns = info.desc().append_child("channels");
     for(const std::map<std::string, std::string> &item : channels) {
-
-        std::vector<std::pair<std::string, std::string>> ch_info;
+        lsl::xml_element chn = chns.append_child("channel");
         for(auto &[key, val] : item) {
-            ch_info.push_back(std::make_pair(key, val));
+            chn.append_child_value(key, val);
         }
-        chns.append_child("channel")
-            .append_child_value(ch_info[0].first, ch_info[0].second)
-            .append_child_value(ch_info[1].first, ch_info[1].second);
     }
 
     return info;
 }
 
-void XdfStreamer::on_checkBox_stateChanged(int status)
+void XdfStreamer::on_checkBoxRandomSignal_stateChanged(int status)
 {
     if (status == Qt::Checked) {
-        ui->pushButton->setEnabled(true);
+        ui->pushButtonStream->setEnabled(true);
         ui->label_3->show();
         ui->lineEdit_2->show();
         ui->lineEdit_2->setText("ActiChamp-0");
@@ -210,12 +207,12 @@ void XdfStreamer::on_checkBox_stateChanged(int status)
         ui->label_5->show();
         ui->lineEdit_3->show();
         ui->groupBox_2->show();
-        ui->treeWidget->hide();
-        ui->treeWidget_2->show();
-        ui->treeWidget_2->header()->show();
-        ui->treeWidget_2->setColumnWidth(0, std::round(0.5 * ui->treeWidget_2->width()));
+        ui->treeWidgetXDF->hide();
+        ui->treeWidgetRandomSignal->show();
+        ui->treeWidgetRandomSignal->header()->show();
+        ui->treeWidgetRandomSignal->setColumnWidth(0, std::round(0.5 * ui->treeWidgetRandomSignal->width()));
 
-        QTreeWidgetItem *item = new QTreeWidgetItem(ui->treeWidget_2);
+        QTreeWidgetItem *item = new QTreeWidgetItem(ui->treeWidgetRandomSignal);
         item->setText(0, "Stream-" + QString::number(1));
 
         QTreeWidgetItem *subItem = new QTreeWidgetItem(item);
@@ -243,11 +240,11 @@ void XdfStreamer::on_checkBox_stateChanged(int status)
         subItem->setText(1, ui->lineEdit_3->text());
         item->addChild(subItem);
 
-        ui->treeWidget_2->addTopLevelItem(item);
-        ui->treeWidget_2->expandAll();
+        ui->treeWidgetRandomSignal->addTopLevelItem(item);
+        ui->treeWidgetRandomSignal->expandAll();
     }
     else {
-        ui->pushButton->setEnabled(this->stream_ready ? true : false);
+        ui->pushButtonStream->setEnabled(this->stream_ready ? true : false);
         ui->label_3->hide();
         ui->lineEdit_2->hide();
         ui->label_4->hide();
@@ -255,34 +252,34 @@ void XdfStreamer::on_checkBox_stateChanged(int status)
         ui->label_5->hide();
         ui->lineEdit_3->hide();
         ui->groupBox_2->hide();
-        ui->treeWidget_2->clear();
-        ui->treeWidget_2->hide();
-        ui->treeWidget_2->header()->hide();
-        ui->treeWidget->show();
+        ui->treeWidgetRandomSignal->clear();
+        ui->treeWidgetRandomSignal->hide();
+        ui->treeWidgetRandomSignal->header()->hide();
+        ui->treeWidgetXDF->show();
     }
 
     bool enabled = status == Qt::Checked ? false : true;
     ui->label->setEnabled(enabled);
     ui->lineEdit->setEnabled(enabled);
-    ui->toolButton->setEnabled(enabled);
+    ui->toolButtonBrowse->setEnabled(enabled);
     bool loadButtonEnabled = ui->lineEdit->text().isEmpty() ? false : enabled;
-    ui->pushButton_2->setEnabled(loadButtonEnabled);
+    ui->pushButtonLoad->setEnabled(loadButtonEnabled);
 }
 
-void XdfStreamer::on_toolButton_clicked()
+void XdfStreamer::on_toolButtonBrowse_clicked()
 {
     QString fileName = QFileDialog::getOpenFileName(this, tr("Open XDF File"), "", tr("XDF Files (*.xdf)"));
 
     if (!fileName.isEmpty()) {
         this->clearCache();
         ui->lineEdit->setText(fileName);
-        on_pushButton_2_clicked();
+        on_pushButtonLoad_clicked();
     }
 }
 
-void XdfStreamer::on_pushButton_2_clicked()
+void XdfStreamer::on_pushButtonLoad_clicked()
 {
-    if (ui->pushButton_2->text().compare("Load") == 0) {
+    if (ui->pushButtonLoad->text().compare("Load") == 0) {
         this->xdf = QSharedPointer<Xdf>(new Xdf);
         this->xdf->load_xdf(ui->lineEdit->text().toStdString());
 
@@ -291,24 +288,23 @@ void XdfStreamer::on_pushButton_2_clicked()
             QMessageBox::warning(this, tr("XDF Streamer"), msg, QMessageBox::Ok);
         }
         else {
-            ui->pushButton->setEnabled(true);
-            ui->pushButton_2->setText("Unload");
-            ui->treeWidget->header()->show();
-            ui->treeWidget->setColumnWidth(0, std::round(0.5 * ui->treeWidget->width()));
+            ui->pushButtonStream->setEnabled(true);
+            ui->pushButtonLoad->setText("Unload");
+            ui->treeWidgetXDF->header()->show();
+            ui->treeWidgetXDF->setColumnWidth(0, std::round(0.5 * ui->treeWidgetXDF->width()));
 
             /* Get first stream that is not a string stream */
             for (size_t k = 0; k < this->xdf->streams.size(); k++) {
                 if (this->xdf->streams[k].info.channel_format.compare("string") != 0) {
-                    this->stream_idx = k;
                     ui->spinBox->setValue((int)this->xdf->streams[k].info.nominal_srate);
                     break;
                 }
             }
 
             for (size_t k = 0; k < this->xdf->streams.size(); k++) {
-                QTreeWidgetItem *item = new QTreeWidgetItem(ui->treeWidget);
+                QTreeWidgetItem *item = new QTreeWidgetItem(ui->treeWidgetXDF);
                 item->setText(0, "Stream-" + QString::number(k+1));
-                item->setCheckState(0, k == this->stream_idx ? Qt::Checked : Qt::Unchecked);
+                item->setCheckState(0, Qt::Unchecked);
                 item->setDisabled(this->xdf->streams[k].info.channel_format.compare("string") == 0 ? true : false);
 
                 QTreeWidgetItem *subItem = new QTreeWidgetItem(item);
@@ -341,10 +337,9 @@ void XdfStreamer::on_pushButton_2_clicked()
                 subItem->setDisabled(this->xdf->streams[k].info.channel_format.compare("string") == 0 ? true : false);
                 item->addChild(subItem);
 
-                ui->treeWidget->addTopLevelItem(item);
+                ui->treeWidgetXDF->addTopLevelItem(item);
             }
-            ui->treeWidget->expandAll();
-            this->stream_ready = this->stream_idx != -1 ? true : false;
+            ui->treeWidgetXDF->expandAll();
         }
     }
     else {
@@ -355,21 +350,19 @@ void XdfStreamer::on_pushButton_2_clicked()
 void XdfStreamer::on_lineEdit_textChanged(const QString &path)
 {
     if (path.isEmpty()) {
-        ui->pushButton_2->setEnabled(false);
+        ui->pushButtonLoad->setEnabled(false);
     }
     else {
-        ui->pushButton_2->setEnabled(true);
+        ui->pushButtonLoad->setEnabled(true);
     }
 }
 
-void XdfStreamer::on_pushButton_clicked()
+void XdfStreamer::on_pushButtonStream_clicked()
 {
-    if (ui->pushButton->text().compare("Stream") == 0) {
-        ui->pushButton->setText("Stop");
-        this->enableControlPanel(false);
+    if (ui->pushButtonStream->text().compare("Stream") == 0) {
         this->stop_thread = false;
 
-        if (ui->checkBox->isChecked()) {
+        if (ui->checkBoxRandomSignal->isChecked()) {
             qDebug() << "Generating synthetic signals";
 
             const int samplingRate = ui->spinBox->value();
@@ -382,54 +375,86 @@ void XdfStreamer::on_pushButton_clicked()
                                                       "and/or RT_Receiver_GUI to run simulations."),
                                      QMessageBox::Ok, QMessageBox::Ok);
 
-            this->pushThread = new std::thread(&XdfStreamer::pushRandomData, this, outlet_ptr, samplingRate, channelCount);
+            pushThreads.push_back(new std::thread(&XdfStreamer::pushRandomData, this, outlet_ptr, samplingRate, channelCount));
         }
         else {
+            if(!this->stream_ready) {
+                QMessageBox::information(this, tr("Status"), tr("Please select a stream!\n"
+                                                                "At least one stream needs to be selected...\n"),
+                                         QMessageBox::Ok, QMessageBox::Ok);
+                this->stop_thread = true;
+                return;
+            }
+
             qDebug() << "Load XDF";
 
-            const int samplingRate = ui->spinBox->value();
-            const int channelCount = this->xdf->streams[this->stream_idx].info.channel_count;
-            lsl::stream_info info = this->initializeLslStreamsForXdfData(samplingRate, channelCount);
-            QSharedPointer<lsl::stream_outlet> outlet_ptr = QSharedPointer<lsl::stream_outlet>(new lsl::stream_outlet(info));
+            // Find the checked streams
+            for (size_t i = 0; i < ui->treeWidgetXDF->topLevelItemCount(); ++i) {
+                if (ui->treeWidgetXDF->topLevelItem((int)i)->checkState(0)) {
+                    std::cout << "Selected " << i << std::endl;
+
+                    const int samplingRate = this->xdf->streams[i].info.nominal_srate;
+                    const int channelCount = this->xdf->streams[i].info.channel_count;
+
+                    lsl::stream_info info = this->initializeLslStreamsForXdfData(i, samplingRate, channelCount);
+                    QSharedPointer<lsl::stream_outlet> outlet_ptr = QSharedPointer<lsl::stream_outlet>(new lsl::stream_outlet(info));
+                    // add thread to the list
+                    pushThreads.push_back(new std::thread(&XdfStreamer::pushXdfData, this, i, outlet_ptr, samplingRate, channelCount));
+                }
+            }
 
             QMessageBox::information(this, tr("Status"), tr("Lab Streaming Layer stream initialized.\n"
                                                             "Please start LabRecorder and refresh the streams\n"
                                                             "and/or RT_Receiver_GUI to run simulations."),
                                      QMessageBox::Ok, QMessageBox::Ok);
-
-            this->pushThread = new std::thread(&XdfStreamer::pushXdfData, this, outlet_ptr, samplingRate, channelCount);
         }
-        ui->treeWidget->setEnabled(false);
-        ui->treeWidget_2->setEnabled(false);
+
+        ui->pushButtonStream->setText("Stop");
+        this->enableControlPanel(false);
+
+        ui->treeWidgetXDF->setEnabled(false);
+        ui->treeWidgetRandomSignal->setEnabled(false);
     }
     else {
         this->mutex_stop_thread.lock();
         this->stop_thread = true;
         this->mutex_stop_thread.unlock();
 
-        ui->treeWidget->setEnabled(true);
-        ui->treeWidget_2->setEnabled(true);
-        ui->pushButton->setText("Stream");
-        this->pushThread->join();
-        delete this->pushThread;
-        this->pushThread = nullptr;
+        ui->treeWidgetXDF->setEnabled(true);
+        ui->treeWidgetRandomSignal->setEnabled(true);
+        ui->pushButtonStream->setText("Stream");
+
+        for (int i = 0; i < pushThreads.size(); ++i) {
+            std::cout << "Stopping thread..." << " id " << pushThreads[i]->get_id() << std::endl;
+            pushThreads[i]->join();
+            delete this->pushThreads[i];
+        }
+        pushThreads.clear();
+
         this->enableControlPanel(true);
     }
 }
 
-void XdfStreamer::on_treeWidget_itemClicked(QTreeWidgetItem *item)
+void XdfStreamer::on_treeWidgetXDF_itemClicked(QTreeWidgetItem *item)
 {
-    QTreeWidgetItemIterator it(ui->treeWidget);
+    this->stream_ready = false;
+    for (size_t i = 0; i < ui->treeWidgetXDF->topLevelItemCount(); ++i) {
+        if (ui->treeWidgetXDF->topLevelItem((int)i)->checkState(0)) {
 
-    if (item->checkState(0) == Qt::Checked) {
-        for (size_t k = 0; k < ui->treeWidget->topLevelItemCount(); k++) {
-            if (ui->treeWidget->topLevelItem((int)k) == item) {
-                this->stream_idx = k;
-                ui->spinBox->setValue(std::round(this->xdf->streams[k].info.nominal_srate));
+            // IRREGULAR_RATE = 0.0, ignoring now
+            if(this->xdf->streams[i].info.nominal_srate < 1.0){
+                QMessageBox::information(this, tr("Status"), tr("You select a stream that has irregular rate!\n"
+                                                                "The app will ignore that stream!\n"
+                                                                "This app does not suport irregular rate at the moment...\n"),
+                                         QMessageBox::Ok, QMessageBox::Ok);
+
+
+                // uncheck
+                ui->treeWidgetXDF->topLevelItem((int)i)->setCheckState(0, Qt::Unchecked);
+                continue;
             }
-            else {
-                ui->treeWidget->topLevelItem((int)k)->setCheckState(0, Qt::Unchecked);
-            }
+
+            this->stream_ready = true;
         }
     }
 }
