@@ -36,6 +36,7 @@ private:
     void enableControlPanel(bool enabled);
     lsl::stream_info initializeLslStreamsForRandomData(const int samplingRate, const int channelCount);
     lsl::stream_info initializeLslStreamsForXdfData(const int stream_id, const int samplingRate, const int channelCount);
+    void stopThreads(const bool flag);
 
 private slots:
     void on_checkBoxRandomSignal_stateChanged(int status);

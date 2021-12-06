@@ -48,10 +48,8 @@ XdfStreamer::~XdfStreamer()
 
 void XdfStreamer::pushRandomData(QSharedPointer<lsl::stream_outlet> outlet_ptr, const int samplingRate, const int channelCount)
 {
-    const double dSamplingInterval = 1.0 / samplingRate;
+    const int dSamplingInterval = (1.0 / samplingRate)*1000; // msec
     std::vector<double> sample(channelCount);
-
-    double starttime = ((double)clock()) / CLOCKS_PER_SEC;
 
     for (unsigned t = 0;; t++) {
         {
@@ -62,7 +60,7 @@ void XdfStreamer::pushRandomData(QSharedPointer<lsl::stream_outlet> outlet_ptr, 
             }
         }
 
-        while (((double)clock()) / CLOCKS_PER_SEC < starttime + t * dSamplingInterval);
+        std::this_thread::sleep_for(std::chrono::milliseconds(dSamplingInterval));
 
         for (int c = 0; c < channelCount; c++) {
             /* Generate a sine wave
@@ -91,13 +89,19 @@ void XdfStreamer::pushXdfData(const int stream_id, QSharedPointer<lsl::stream_ou
             }
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(dSamplingInterval));
-
         for (int c = 0; c < channelCount; c++) {
             sample[c] = this->xdf->streams[stream_id].time_series[c][t];
         }
 
         outlet_ptr->push_sample(sample);
+
+        //calculate dt = timestamps[t+1] - timestamps[t]
+        int time_to_sleep = 0;
+        if (t < xdf->streams[stream_id].time_stamps.size() - 1) {
+            time_to_sleep = int((xdf->streams[stream_id].time_stamps[t+1] - xdf->streams[stream_id].time_stamps[t])*1000);
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(time_to_sleep));
     }
 
     outlet_ptr.clear();
@@ -191,6 +195,12 @@ lsl::stream_info XdfStreamer::initializeLslStreamsForXdfData(const int stream_id
     }
 
     return info;
+}
+
+void XdfStreamer::stopThreads(const bool flag)
+{
+    std::lock_guard<std::mutex> guard(this->mutex_stop_thread);
+    this->stop_thread = flag;
 }
 
 void XdfStreamer::on_checkBoxRandomSignal_stateChanged(int status)
@@ -358,8 +368,7 @@ void XdfStreamer::on_lineEdit_textChanged(const QString &path)
 void XdfStreamer::on_pushButtonStream_clicked()
 {
     if (ui->pushButtonStream->text().compare("Stream") == 0) {
-        this->stop_thread = false;
-
+        stopThreads(false);
         if (ui->checkBoxRandomSignal->isChecked()) {
             qDebug() << "Generating synthetic signals";
 
@@ -380,7 +389,7 @@ void XdfStreamer::on_pushButtonStream_clicked()
                 QMessageBox::information(this, tr("Status"), tr("Please select a stream!\n"
                                                                 "At least one stream needs to be selected...\n"),
                                          QMessageBox::Ok, QMessageBox::Ok);
-                this->stop_thread = true;
+                stopThreads(true);
                 return;
             }
 
@@ -414,9 +423,7 @@ void XdfStreamer::on_pushButtonStream_clicked()
         ui->treeWidgetRandomSignal->setEnabled(false);
     }
     else {
-        this->mutex_stop_thread.lock();
-        this->stop_thread = true;
-        this->mutex_stop_thread.unlock();
+        stopThreads(true);
 
         ui->treeWidgetXDF->setEnabled(true);
         ui->treeWidgetRandomSignal->setEnabled(true);
