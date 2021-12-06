@@ -11,11 +11,11 @@ on:
 env:
   LSL_URL: 'https://github.com/sccn/liblsl/releases/download'
   LSL_RELEASE_PREFIX: 'v'
-  LSL_RELEASE: '1.14.0'
-  LSL_RELEASE_SUFFIX: 'b5'
+  LSL_RELEASE: '1.15.2'
+  LSL_RELEASE_SUFFIX: ''
   XDF_URL: 'https://github.com/xdf-modules/libxdf/releases/download'
   XDF_RELEASE_PREFIX: 'v'
-  XDF_RELEASE: '0.99.5'
+  XDF_RELEASE: '0.99.8'
   XDF_RELEASE_SUFFIX: ''
 
 jobs:
@@ -24,7 +24,7 @@ jobs:
     strategy:
       matrix:
         os:
-        - ubuntu-latest
+        - ubuntu-20.04
         - windows-latest
         - macOS-latest
       fail-fast: false
@@ -36,40 +36,39 @@ jobs:
       run: cmake --version
 
     - name: Install liblsl, libxdf, and Qt (Ubuntu)
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.os == 'ubuntu-20.04'
       run: |
            echo ${{ github.ref }}
+           sudo apt-get update --fix-missing  # Needed for libpulse on azure mirror.
+           sudo apt install -y libpugixml1v5 qtbase5-dev
            curl -L ${XDF_URL}/${XDF_RELEASE_PREFIX}${XDF_RELEASE}${XDF_RELEASE_SUFFIX}/libxdf-${XDF_RELEASE}-Linux.deb -o libxdf.deb
            sudo dpkg -i libxdf.deb
-           curl -L ${LSL_URL}/${LSL_RELEASE_PREFIX}${LSL_RELEASE}${LSL_RELEASE_SUFFIX}/liblsl-${LSL_RELEASE}-Linux-bionic.deb -o liblsl.deb
+           curl -L ${LSL_URL}/${LSL_RELEASE_PREFIX}${LSL_RELEASE}${LSL_RELEASE_SUFFIX}/liblsl-${LSL_RELEASE}-focal_amd64.deb -o liblsl.deb
            sudo dpkg -i liblsl.deb
-           sudo apt install -y qtbase5-dev
 
-    - name: Install liblsl and libxdf (Windows)
+    - name: Install liblsl and libxdf (Windows 64)
       if: matrix.os == 'windows-latest'
       run: |
-           Invoke-WebRequest -Uri $Env:LSL_URL/$Env:LSL_RELEASE_PREFIX$Env:LSL_RELEASE$Env:LSL_RELEASE_SUFFIX/liblsl-$Env:LSL_RELEASE-Win64.zip -o liblsl.7z
+           Invoke-WebRequest -Uri $Env:LSL_URL/$Env:LSL_RELEASE_PREFIX$Env:LSL_RELEASE$Env:LSL_RELEASE_SUFFIX/liblsl-$Env:LSL_RELEASE-Win_amd64.zip -o liblsl.7z
            7z x liblsl.7z -oLSL
            Invoke-WebRequest -Uri $Env:XDF_URL/$Env:XDF_RELEASE_PREFIX$Env:XDF_RELEASE$Env:XDF_RELEASE_SUFFIX/libxdf-$Env:XDF_RELEASE-win64.zip -o libxdf.7z
            7z x libxdf.7z -oXDF
 
-    - name: Install liblsl, libxdf, and Qt (macOS)
+    - name: Install liblsl, libxdf (MacOS)
       if: matrix.os == 'macOS-latest'
       run: |
-           curl -L ${LSL_URL}/${LSL_RELEASE_PREFIX}${LSL_RELEASE}${LSL_RELEASE_SUFFIX}/liblsl-${LSL_RELEASE}-MacOS10.13.tar.bz2 -o liblsl.tar.bz2
+           curl -L ${LSL_URL}/${LSL_RELEASE_PREFIX}${LSL_RELEASE}${LSL_RELEASE_SUFFIX}/liblsl-${LSL_RELEASE}-OSX_amd64.tar.bz2 -o liblsl.tar.bz2
            mkdir LSL
            tar -xvf liblsl.tar.bz2 -C LSL
            curl -L ${XDF_URL}/${XDF_RELEASE_PREFIX}${XDF_RELEASE}${XDF_RELEASE_SUFFIX}/libxdf-${XDF_RELEASE}-Darwin.tar.bz2 -o libxdf.tar.bz2
            mkdir XDF
            tar -xvf libxdf.tar.bz2 -C XDF
-           brew install qt
-           echo '::set-env name=CMAKE_PREFIX_PATH::/usr/local/opt/qt'
 
-    - name: Install Qt (Windows)
-      if: matrix.os == 'windows-latest'
+    - name: Install Qt (Windows and MacOS)
+      if: matrix.os == 'windows-latest' || matrix.os == 'macOS-latest'
       uses: jurplel/install-qt-action@v2
       with:
-        version: 5.15.1
+        version: 5.15.2
 
     - name: Configure CMake
       shell: bash
@@ -96,7 +95,7 @@ jobs:
 
   release:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
     
     - name: Download Packages
