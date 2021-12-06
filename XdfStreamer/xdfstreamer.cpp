@@ -48,8 +48,10 @@ XdfStreamer::~XdfStreamer()
 
 void XdfStreamer::pushRandomData(QSharedPointer<lsl::stream_outlet> outlet_ptr, const int samplingRate, const int channelCount)
 {
-    const int dSamplingInterval = (1.0 / samplingRate)*1000; // msec
+    const double dSamplingInterval = 1.0 / samplingRate;
     std::vector<double> sample(channelCount);
+
+    double starttime = ((double)clock()) / CLOCKS_PER_SEC;
 
     for (unsigned t = 0;; t++) {
         {
@@ -60,7 +62,7 @@ void XdfStreamer::pushRandomData(QSharedPointer<lsl::stream_outlet> outlet_ptr, 
             }
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(dSamplingInterval));
+        std::this_thread::sleep_for(std::chrono::milliseconds(int(1000*(starttime + t*dSamplingInterval - ((double)clock()/CLOCKS_PER_SEC)))));
 
         for (int c = 0; c < channelCount; c++) {
             /* Generate a sine wave
@@ -78,8 +80,10 @@ void XdfStreamer::pushRandomData(QSharedPointer<lsl::stream_outlet> outlet_ptr, 
 
 void XdfStreamer::pushXdfData(const int stream_id, QSharedPointer<lsl::stream_outlet> outlet_ptr, const int samplingRate, const int channelCount)
 {
-    const int dSamplingInterval = (1.0 / samplingRate)*1000; // in msec
+    const double dSamplingInterval = 1.0 / samplingRate;
     std::vector<double> sample(channelCount);
+
+    double starttime = ((double)clock()) / CLOCKS_PER_SEC;
 
     for (unsigned t = 0; t < xdf->streams[stream_id].time_series.front().size(); t++) {
         {
@@ -89,19 +93,13 @@ void XdfStreamer::pushXdfData(const int stream_id, QSharedPointer<lsl::stream_ou
             }
         }
 
+        std::this_thread::sleep_for(std::chrono::milliseconds(int(1000*(starttime + t*dSamplingInterval - ((double)clock()/CLOCKS_PER_SEC)))));
+
         for (int c = 0; c < channelCount; c++) {
             sample[c] = this->xdf->streams[stream_id].time_series[c][t];
         }
 
         outlet_ptr->push_sample(sample);
-
-        //calculate dt = timestamps[t+1] - timestamps[t]
-        int time_to_sleep = 0;
-        if (t < xdf->streams[stream_id].time_stamps.size() - 1) {
-            time_to_sleep = int((xdf->streams[stream_id].time_stamps[t+1] - xdf->streams[stream_id].time_stamps[t])*1000);
-        }
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(time_to_sleep));
     }
 
     outlet_ptr.clear();
