@@ -80,10 +80,8 @@ void XdfStreamer::pushRandomData(QSharedPointer<lsl::stream_outlet> outlet_ptr, 
 
 void XdfStreamer::pushXdfData(const int stream_id, QSharedPointer<lsl::stream_outlet> outlet_ptr, const int samplingRate, const int channelCount)
 {
-    const double dSamplingInterval = 1.0 / samplingRate;
+    const int dSamplingInterval = (1.0 / samplingRate)*1000; // in msec
     std::vector<double> sample(channelCount);
-
-    double starttime = ((double)clock()) / CLOCKS_PER_SEC;
 
     for (unsigned t = 0; t < xdf->streams[stream_id].time_series.front().size(); t++) {
         {
@@ -93,7 +91,7 @@ void XdfStreamer::pushXdfData(const int stream_id, QSharedPointer<lsl::stream_ou
             }
         }
 
-        while (((double)clock()) / CLOCKS_PER_SEC < starttime + t * dSamplingInterval);
+        std::this_thread::sleep_for(std::chrono::milliseconds(dSamplingInterval));
 
         for (int c = 0; c < channelCount; c++) {
             sample[c] = this->xdf->streams[stream_id].time_series[c][t];
