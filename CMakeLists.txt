@@ -64,3 +64,21 @@ elseif(UNIX)
 	set(CPACK_DEBIAN_PACKAGE_GENERATE_SHLIBS ON)
 endif()
 include(CPack)
+
+if (WIN32)
+	get_target_property(QT_QMAKE_EXECUTABLE Qt::qmake IMPORTED_LOCATION)
+	get_filename_component(QT_WINDEPLOYQT_EXECUTABLE ${QT_QMAKE_EXECUTABLE} PATH)
+	set(QT_WINDEPLOYQT_EXECUTABLE "${QT_WINDEPLOYQT_EXECUTABLE}/windeployqt.exe")
+
+	add_custom_command(
+			TARGET ${PROJECT_NAME} POST_BUILD
+			COMMAND ${QT_WINDEPLOYQT_EXECUTABLE}
+			--no-translations --no-system-d3d-compiler
+			--qmldir ${CMAKE_CURRENT_SOURCE_DIR}
+			$<TARGET_FILE_DIR:${PROJECT_NAME}>)
+	add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different
+			$<TARGET_FILE:LSL::lsl>
+			# $<TARGET_FILE:XDF::xdf>  # not needed as it is statically linked.
+			$<TARGET_FILE_DIR:${PROJECT_NAME}>)
+endif()
