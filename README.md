@@ -20,3 +20,6 @@ If the dependencies are not installed to standard system folders then you will n
 * -DQt5_DIR=/volume/Qt/{platform}/lib/cmake/Qt5 
 * -DLSL_INSTALL_ROOT=path/to/liblsl/unpack/
 * -DXDF_INSTALL_ROOT=path/to/xdf/unpack/
+
+If you are debugging or not intending to install to the system, then you need to change the install dir:
+* -DCMAKE_INSTALL_PREFIX=${PWD}/build/install
