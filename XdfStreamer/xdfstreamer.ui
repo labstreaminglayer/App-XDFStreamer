@@ -16,7 +16,7 @@
   <widget class="QWidget" name="centralWidget">
    <layout class="QGridLayout" name="gridLayout_3">
     <item row="2" column="0">
-     <widget class="QTreeWidget" name="treeWidget">
+     <widget class="QTreeWidget" name="treeWidgetXDF">
       <column>
        <property name="text">
         <string notr="true">1</string>
@@ -40,7 +40,7 @@
        </spacer>
       </item>
       <item>
-       <widget class="QPushButton" name="pushButton">
+       <widget class="QPushButton" name="pushButtonStream">
         <property name="text">
          <string>Stream</string>
         </property>
@@ -80,14 +80,14 @@
           <widget class="QLineEdit" name="lineEdit"/>
          </item>
          <item>
-          <widget class="QToolButton" name="toolButton">
+          <widget class="QToolButton" name="toolButtonBrowse">
            <property name="text">
             <string>...</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="pushButton_2">
+          <widget class="QPushButton" name="pushButtonLoad">
            <property name="text">
             <string>Load</string>
            </property>
@@ -121,7 +121,7 @@
           </spacer>
          </item>
          <item>
-          <widget class="QCheckBox" name="checkBox">
+          <widget class="QCheckBox" name="checkBoxRandomSignal">
            <property name="text">
             <string>Generate Random Signals</string>
            </property>
@@ -257,7 +257,7 @@
      </widget>
     </item>
     <item row="3" column="0">
-     <widget class="QTreeWidget" name="treeWidget_2">
+     <widget class="QTreeWidget" name="treeWidgetRandomSignal">
       <column>
        <property name="text">
         <string notr="true">1</string>
@@ -273,7 +273,7 @@
      <x>0</x>
      <y>0</y>
      <width>1031</width>
-     <height>26</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>
