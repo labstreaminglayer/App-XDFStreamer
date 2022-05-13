@@ -73,7 +73,7 @@ jobs:
     - name: Configure CMake
       shell: bash
       run: |
-           cmake -S . -B build -DLSL_INSTALL_ROOT=$PWD/LSL/ -DXDF_INSTALL_ROOT=$PWD/XDF/ -DCMAKE_INSTALL_PREFIX=${PWD}/build/install -DCPACK_PACKAGE_DIRECTORY=${PWD}/build/package -DCPACK_DEBIAN_PACKAGE_DEPENDS=1
+           cmake -S . -B build -DLSL_INSTALL_ROOT=$PWD/LSL/ -DXDF_INSTALL_ROOT=$PWD/XDF/ -DCMAKE_INSTALL_PREFIX=${PWD}/build/install -DCPACK_PACKAGE_DIRECTORY=${PWD}/build/package
 
     - name: Make
       run: cmake --build build --config Release -j
